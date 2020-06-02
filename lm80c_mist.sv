@@ -296,7 +296,7 @@ wire SIO_SEL = (A[7:4] == 'b0010) & (MREQ & ~IORQ);
 wire VDP_SEL = (A[7:4] == 'b0011) & (MREQ & ~IORQ);
 wire PSG_SEL = (A[7:4] == 'b0100) & (MREQ & ~IORQ);
 
-wire U20A = ~IORQ | VDP_SEL;
+wire U20A = IORQ | VDP_SEL;
  
 wire CSR = RD | U20A;
 wire CSW = WR | U20A;
@@ -305,9 +305,9 @@ wire BDIR = WR | PSG_SEL;
 wire BC   = A[0] | PSG_SEL;
 
 wire [7:0] cpu_din = (
-	PIO_SEL ? 0 :
-	CTC_SEL ? 0 :
-	SIO_SEL ? 0 :
+	PIO_SEL ? 0        :
+	CTC_SEL ? ctc_dout :
+	SIO_SEL ? 0        :
 	VDP_SEL ? vdp_dout :
 	PSG_SEL ? psg_dout : sdram_dout	
 );
@@ -423,8 +423,7 @@ AY8912 AY8912
 	.CHANNEL_C( CHANNEL_C ),
 	
 	.DI( cpu_dout ),
-	.DO( psg_dout ),
-	
+	.DO( psg_dout )	
 );
 
 /*
