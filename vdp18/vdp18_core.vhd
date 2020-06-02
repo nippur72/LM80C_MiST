@@ -74,14 +74,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 entity vdp18_core is
+
   generic (
+    is_pal_g      : integer := 0;
     compat_rgb_g  : integer := 0
   );
   port (
     -- Global Interface -------------------------------------------------------
-    clock_i       : in  std_logic;
+    clk_i         : in  std_logic;
     clk_en_10m7_i : in  std_logic;
-	 clk_en_5m37_i	: in  std_logic;
     reset_n_i     : in  std_logic;
     -- CPU Interface ----------------------------------------------------------
     csr_n_i       : in  std_logic;
@@ -91,16 +92,12 @@ entity vdp18_core is
     cd_i          : in  std_logic_vector(0 to  7);
     cd_o          : out std_logic_vector(0 to  7);
     -- VRAM Interface ---------------------------------------------------------
-	 vram_ce_o		: out std_logic;
-	 vram_oe_o		: out std_logic;
     vram_we_o     : out std_logic;
     vram_a_o      : out std_logic_vector(0 to 13);
     vram_d_o      : out std_logic_vector(0 to  7);
     vram_d_i      : in  std_logic_vector(0 to  7);
     -- Video Interface --------------------------------------------------------
     col_o         : out std_logic_vector(0 to 3);
-	 cnt_hor_o		: out std_logic_vector(8 downto 0);
-	 cnt_ver_o		: out std_logic_vector(7 downto 0);
     rgb_r_o       : out std_logic_vector(0 to 7);
     rgb_g_o       : out std_logic_vector(0 to 7);
     rgb_b_o       : out std_logic_vector(0 to 7);
@@ -124,6 +121,7 @@ architecture struct of vdp18_core is
 
   signal clk_en_10m7_s,
          clk_en_5m37_s,
+         clk_en_3m58_s,
          clk_en_acc_s     : boolean;
 
   signal opmode_s         : opmode_t;
@@ -176,41 +174,52 @@ architecture struct of vdp18_core is
 
   signal irq_s            : boolean;
 
---  signal false_s          : boolean;
- 
-	signal vram_read_s		: boolean;
-	signal vram_write_s		: boolean;
+  signal false_s          : boolean;
 
 begin
 
   -- temporary defaults
- -- false_s       <= false;
+  false_s       <= false;
 
   clk_en_10m7_s <= to_boolean_f(clk_en_10m7_i);
-  clk_en_5m37_s <= to_boolean_f(clk_en_5m37_i);
   rd_s          <= not to_boolean_f(csr_n_i);
   wr_s          <= not to_boolean_f(csw_n_i);
 
   reset_s <= reset_n_i = '0';
 
+
+  -----------------------------------------------------------------------------
+  -- Clock Generator
+  -----------------------------------------------------------------------------
+  clk_gen_b : vdp18_clk_gen
+    port map (
+      clk_i         => clk_i,
+      clk_en_10m7_i => clk_en_10m7_i,
+      reset_i       => reset_s,
+      clk_en_5m37_o => clk_en_5m37_s,
+      clk_en_3m58_o => clk_en_3m58_s,
+      clk_en_2m68_o => open
+    );
+
+
   -----------------------------------------------------------------------------
   -- Horizontal and Vertical Timing Generator
   -----------------------------------------------------------------------------
   hor_vert_b : vdp18_hor_vert
+    generic map (
+      is_pal_g => is_pal_g
+    )
     port map (
-      clock_i       => clock_i,
+      clk_i         => clk_i,
       clk_en_5m37_i => clk_en_5m37_s,
       reset_i       => reset_s,
       opmode_i      => opmode_s,
-		ntsc_pal_i		=> '0',			-- NTSC
       num_pix_o     => num_pix_s,
       num_line_o    => num_line_s,
       vert_inc_o    => vert_inc_s,
       hsync_n_o     => hsync_n_s,
       vsync_n_o     => vsync_n_s,
-      blank_o       => blank_s,
-		cnt_hor_o		=> cnt_hor_o,
-		cnt_ver_o		=> cnt_ver_o
+      blank_o       => blank_s
     );
 
   hsync_n_o     <= hsync_n_s;
@@ -223,14 +232,10 @@ begin
   -----------------------------------------------------------------------------
   ctrl_b : vdp18_ctrl
     port map (
-      clock_i         => clock_i,
+      clk_i         => clk_i,
       clk_en_5m37_i => clk_en_5m37_s,
       reset_i       => reset_s,
       opmode_i      => opmode_s,
-      vram_read_i   => vram_read_s,
-      vram_write_i  => vram_write_s,
-		vram_ce_o		=> vram_ce_o,
-		vram_oe_o		=> vram_oe_o,
       num_pix_i     => num_pix_s,
       num_line_i    => num_line_s,
       vert_inc_i    => vert_inc_s,
@@ -250,7 +255,7 @@ begin
   -----------------------------------------------------------------------------
   cpu_io_b : vdp18_cpuio
     port map (
-      clock_i         => clock_i,
+      clk_i         => clk_i,
       clk_en_10m7_i => clk_en_10m7_s,
       clk_en_acc_i  => clk_en_acc_s,
       reset_i       => reset_s,
@@ -262,8 +267,6 @@ begin
       cd_oe_o       => open,
       access_type_i => access_type_s,
       opmode_o      => opmode_s,
-		vram_read_o   => vram_read_s,
-		vram_write_o  => vram_write_s,
       vram_we_o     => vram_we_o,
       vram_a_o      => cpu_vram_a_s,
       vram_d_o      => vram_d_o,
@@ -317,7 +320,7 @@ begin
   -----------------------------------------------------------------------------
   pattern_b : vdp18_pattern
     port map (
-      clock_i         => clock_i,
+      clk_i         => clk_i,
       clk_en_5m37_i => clk_en_5m37_s,
       clk_en_acc_i  => clk_en_acc_s,
       reset_i       => reset_s,
@@ -340,7 +343,7 @@ begin
   -----------------------------------------------------------------------------
   sprite_b : vdp18_sprite
     port map (
-      clock_i         => clock_i,
+      clk_i         => clk_i,
       clk_en_5m37_i => clk_en_5m37_s,
       clk_en_acc_i  => clk_en_acc_s,
       reset_i       => reset_s,
@@ -373,7 +376,7 @@ begin
       compat_rgb_g  => compat_rgb_g
     )
     port map (
-      clock_i         => clock_i,
+      clk_i         => clk_i,
       clk_en_5m37_i => clk_en_5m37_s,
       reset_i       => reset_s,
       vert_active_i => vert_active_s,

@@ -54,27 +54,23 @@ use work.vdp18_pack.access_t;
 
 entity vdp18_ctrl is
 
-	port (
-		clock_i        : in  std_logic;
-		clk_en_5m37_i : in  boolean;
-		reset_i       : in  boolean;
-		opmode_i      : in  opmode_t;
-		vram_read_i		: in  boolean;
-		vram_write_i	: in  boolean;
-		vram_ce_o		: out std_logic;
-		vram_oe_o		: out std_logic;
-		num_pix_i     : in  hv_t;
-		num_line_i    : in  hv_t;
-		vert_inc_i    : in  boolean;
-		reg_blank_i   : in  boolean;
-		reg_size1_i   : in  boolean;
-		stop_sprite_i : in  boolean;
-		clk_en_acc_o  : out boolean;
-		access_type_o : out access_t;
-		vert_active_o : out boolean;
-		hor_active_o  : out boolean;
-		irq_o         : out boolean
-	);
+  port (
+    clk_i         : in  std_logic;
+    clk_en_5m37_i : in  boolean;
+    reset_i       : in  boolean;
+    opmode_i      : in  opmode_t;
+    num_pix_i     : in  hv_t;
+    num_line_i    : in  hv_t;
+    vert_inc_i    : in  boolean;
+    reg_blank_i   : in  boolean;
+    reg_size1_i   : in  boolean;
+    stop_sprite_i : in  boolean;
+    clk_en_acc_o  : out boolean;
+    access_type_o : out access_t;
+    vert_active_o : out boolean;
+    hor_active_o  : out boolean;
+    irq_o         : out boolean
+  );
 
 end vdp18_ctrl;
 
@@ -143,17 +139,17 @@ begin
     num_pix_plus_32_v := num_pix_i + 32;
     num_pix_spr_v     := to_integer(num_pix_i and "111111110");
 
-	case opmode_i is
-		-- Graphics I, II and Multicolor Mode -----------------------------------
-		when OPMODE_GRAPH1 |
-				OPMODE_GRAPH2 |
-				OPMODE_MULTIC =>
-			--
-			-- Patterns
-			--
-			if vert_active_q then
-				if num_pix_plus_8_v(0) = '0' then
-					if not xst_bug_wa_c then
+    case opmode_i is
+      -- Graphics I, II and Multicolor Mode -----------------------------------
+      when OPMODE_GRAPH1 |
+           OPMODE_GRAPH2 |
+           OPMODE_MULTIC =>
+        --
+        -- Patterns
+        --
+        if vert_active_q then
+          if num_pix_plus_8_v(0) = '0' then
+            if not xst_bug_wa_c then
 
             -- original code, we want this
             case num_pix_plus_8_v(6 to 7) is
@@ -169,7 +165,7 @@ begin
               when others =>
                 null;
             end case;
-
+            
             else
 
             -- workaround for XST bug, we need this
@@ -195,13 +191,12 @@ begin
              num_pix_i(0 to 5) /= "011111" and
              num_pix_i(6 to 7)  = "00"     and
              num_pix_i(4 to 5) /= "00"     then
-            -- sprite test interleaved with pattern accesses
+            -- sprite test interleaved with pattern accesses - 23 slots
             access_type_s <= AC_STST;
           end if;
-          if (num_pix_plus_32_v(0 to 4) = "00000" or 
-              num_pix_plus_32_v(0 to 5) = "000010") and
-             num_pix_plus_32_v(6 to 7) /= "00"   then
-            -- sprite tests before starting pattern phase
+          if num_pix_plus_32_v(0 to 4) = "00000" or
+             num_pix_plus_32_v(0 to 7) = "00001000"   then
+            -- sprite tests before starting pattern phase - 9 slots
             access_type_s <= AC_STST;
           end if;
 
@@ -233,7 +228,7 @@ begin
               null;
           end case;
         end if;
-
+          
       -- Text Mode ------------------------------------------------------------
       when OPMODE_TEXTM =>
         if vert_active_q                       and
@@ -251,8 +246,8 @@ begin
         end if;
 
       -- Unknown --------------------------------------------------------------
---      when others =>
---        null;
+      when others =>
+        null;
 
     end case;
 
@@ -267,14 +262,14 @@ begin
   -- Purpose:
   --   Track the vertical position with flags.
   --
-  vert_flags: process (clock_i, reset_i)
+  vert_flags: process (clk_i, reset_i)
   begin
     if reset_i then
       vert_active_q     <= false;
       sprite_active_q   <= false;
       sprite_line_act_q <= false;
 
-    elsif clock_i'event and clock_i = '1' then
+    elsif clk_i'event and clk_i = '1' then
       if clk_en_5m37_i then
         -- line-local sprite processing
         if sprite_active_q then
@@ -338,12 +333,12 @@ begin
   -- Purpose:
   --   Track the horizontal position.
   --
-  hor_flags: process (clock_i, reset_i)
+  hor_flags: process (clk_i, reset_i)
   begin
     if reset_i then
       hor_active_q     <= false;
 
-    elsif clock_i'event and clock_i = '1' then
+    elsif clk_i'event and clk_i = '1' then
       if clk_en_5m37_i then
         if not reg_blank_i and
            num_pix_i = -1  then
@@ -365,37 +360,6 @@ begin
   --
   -----------------------------------------------------------------------------
 
-	vram_ctrl: process (clock_i)
-		variable read_b_v	: boolean;
-	begin
-		if rising_edge(clock_i) then
-			if clk_en_5m37_i then
-				vram_ce_o	<= '0';
-				vram_oe_o	<= '0';
-				if access_type_s = AC_CPU then
-					if vram_read_i and not read_b_v then
-						vram_ce_o	<= '1';
-						vram_oe_o	<= '1';
-						read_b_v		:= true;
-					elsif vram_write_i and not read_b_v then
-						vram_ce_o	<= '1';
-						--
-						read_b_v		:= true;
-					else
-						read_b_v		:= false;
-					end if;
-				else
-					if not read_b_v then
-						vram_ce_o	<= '1';
-						vram_oe_o	<= '1';
-						read_b_v		:= true;
-					else
-						read_b_v		:= false;
-					end if;
-				end if;
-			end if;
-		end if;
-	end process;
 
   -----------------------------------------------------------------------------
   -- Ouput mapping

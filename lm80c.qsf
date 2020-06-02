@@ -156,24 +156,33 @@ set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to VGA_*
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_sprite-c.vhd"
+set_global_assignment -name VHDL_FILE vdp18/vdp18_sprite.vhd
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_pattern-c.vhd"
+set_global_assignment -name VHDL_FILE vdp18/vdp18_pattern.vhd
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_pack-p.vhd"
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_hor_vert-c.vhd"
+set_global_assignment -name VHDL_FILE vdp18/vdp18_hor_vert.vhd
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_ctrl-c.vhd"
+set_global_assignment -name VHDL_FILE vdp18/vdp18_ctrl.vhd
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_cpuio-c.vhd"
+set_global_assignment -name VHDL_FILE vdp18/vdp18_cpuio.vhd
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_core-c.vhd"
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_core_comp_pack-p.vhd"
+set_global_assignment -name VHDL_FILE vdp18/vdp18_core.vhd
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_comp_pack-p.vhd"
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_col_pack-p.vhd"
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_col_mux-c.vhd"
+set_global_assignment -name VHDL_FILE vdp18/vdp18_col_mux.vhd
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_clk_gen-c.vhd"
+set_global_assignment -name VHDL_FILE vdp18/vdp18_clk_gen.vhd
+set_global_assignment -name VHDL_FILE "vdp18/vdp18_addr_mux-c.vhd"
+set_global_assignment -name VHDL_FILE vdp18/vdp18_addr_mux.vhd
 set_global_assignment -name SYSTEMVERILOG_FILE lm80c_mist.sv
 set_global_assignment -name SYSTEMVERILOG_FILE AY8912.sv
 set_global_assignment -name VHDL_FILE Z80CTC/z80ctc_top.vhd
 set_global_assignment -name VHDL_FILE Z80CTC/ctc_counter.vhd
 set_global_assignment -name VHDL_FILE Z80CTC/ctc_controler.vhd
-set_global_assignment -name VHDL_FILE vdp18/vdp18_sprite.vhd
-set_global_assignment -name VHDL_FILE vdp18/vdp18_pattern.vhd
-set_global_assignment -name VHDL_FILE "vdp18/vdp18_pack-p.vhd"
-set_global_assignment -name VHDL_FILE vdp18/vdp18_hor_vert.vhd
-set_global_assignment -name VHDL_FILE vdp18/vdp18_ctrl.vhd
-set_global_assignment -name VHDL_FILE vdp18/vdp18_cpuio.vhd
-set_global_assignment -name VHDL_FILE "vdp18/vdp18_core_comp_pack-p.vhd"
-set_global_assignment -name VHDL_FILE "vdp18/vdp18_comp_pack-p.vhd"
-set_global_assignment -name VHDL_FILE "vdp18/vdp18_col_pack-p.vhd"
-set_global_assignment -name VHDL_FILE vdp18/vdp18_col_mux.vhd
-set_global_assignment -name VHDL_FILE vdp18/vdp18_clk_gen.vhd
-set_global_assignment -name VHDL_FILE vdp18/vdp18_addr_mux.vhd
-set_global_assignment -name VHDL_FILE vdp18/vdp18_core.vhd
 set_global_assignment -name VHDL_FILE t80/T80pa.vhd
 set_global_assignment -name VHDL_FILE t80/T80_Reg.vhd
 set_global_assignment -name VERILOG_FILE eraser.v

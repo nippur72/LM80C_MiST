@@ -25,10 +25,10 @@ package vdp18_pack is
   -----------------------------------------------------------------------------
   -- Constants for first and last vertical line of NTSC and PAL mode.
   --
-  constant hv_first_line_ntsc_c : hv_t := to_signed(-40, hv_t'length);	-- 262
+  constant hv_first_line_ntsc_c : hv_t := to_signed(-40, hv_t'length);
   constant hv_last_line_ntsc_c  : hv_t := to_signed(221, hv_t'length);
   --
-  constant hv_first_line_pal_c  : hv_t := to_signed(-65, hv_t'length);	-- 312
+  constant hv_first_line_pal_c  : hv_t := to_signed(-65, hv_t'length);
   constant hv_last_line_pal_c   : hv_t := to_signed(247, hv_t'length);
   --
   -----------------------------------------------------------------------------
@@ -37,10 +37,10 @@ package vdp18_pack is
   -----------------------------------------------------------------------------
   -- Constants for first and last horizontal pixel in text and graphics.
   --
-  constant hv_first_pix_text_c  : hv_t := to_signed(-102, hv_t'length);		-- 342
+  constant hv_first_pix_text_c  : hv_t := to_signed(-102, hv_t'length);
   constant hv_last_pix_text_c   : hv_t := to_signed(239,  hv_t'length);
   --
-  constant hv_first_pix_graph_c : hv_t := to_signed(-86,  hv_t'length);		-- 342
+  constant hv_first_pix_graph_c : hv_t := to_signed(-86,  hv_t'length);
   constant hv_last_pix_graph_c  : hv_t := to_signed(255,  hv_t'length);
   --
   -----------------------------------------------------------------------------

@@ -9,16 +9,17 @@ module keyboard (
 	
 	// VTL chip interface
    input      [ 7:0] port_A,   
-	output     [ 7:0] port_B,   
+	output     [ 7:0] port_B,   	
 	
-	output debug,
-	
-	output reg reset_key
+	output reset_key
 	
 );
 
+reg resetkey;
+
 wire [7:0] KA = port_A;
 assign port_B = KD;				
+assign reset_key = resetkey;
 
 // keyboard output
 assign KD = ((KA[ 0] == 0) ? KM[ 0] : 7'b1111111) & 
@@ -29,10 +30,7 @@ assign KD = ((KA[ 0] == 0) ? KM[ 0] : 7'b1111111) &
 				((KA[ 5] == 0) ? KM[ 5] : 7'b1111111) &
 				((KA[ 6] == 0) ? KM[ 6] : 7'b1111111) &
 				((KA[ 7] == 0) ? KM[ 7] : 7'b1111111) ;			
-				
-// debug
-assign debug = KM[0][0];
-				
+								
 // keyboard matrix 8x8
 reg [7:0] KM [7:0]; 
 
@@ -145,6 +143,7 @@ reg key_extended;
 
 wire [15:0] key = { (key_extended ? 8'he0 : 8'h00) , kdata };
 
+
 always @(posedge clk) begin
 	if(reset) begin		
       key_status <= 1'b1;
@@ -158,7 +157,8 @@ always @(posedge clk) begin
 		KM[ 6] <= 7'b1111111;
 		KM[ 7] <= 7'b1111111;			
 	end 
-	else begin
+	else begin		
+		
 		// ps2 decoder has received a valid byte
 		if(valid) begin
 			if(kdata == 8'he0) 
@@ -173,6 +173,32 @@ always @(posedge clk) begin
 				key_status   <= 1'b0;
 				
 				case(key)	
+					KEY_Z         : begin resetkey <= key_status; end 
+					KEY_C         : begin KM[2][4] <= key_status; end    // KEY_C         
+				endcase
+			end
+		end		
+	end
+end
+
+// the ps2 decoder has been taken from the zx spectrum core
+ps2_intf ps2_keyboard (
+	.CLK		 ( clk       ),
+	.nRESET	 ( !reset    ),
+	
+	// PS/2 interface
+	.PS2_CLK  ( ps2_clk   ),
+	.PS2_DATA ( ps2_data  ),
+	
+	// Byte-wide data interface - only valid for one clock
+	// so must be latched externally if required
+	.DATA		  ( kdata  ),
+	.VALID	  ( valid  ),
+	.ERROR	  ( error  )
+);
+
+endmodule
+
 				/*
 					KEY_F7        : begin KM[7][7] <= key_status; end    // KEY_HELP      
 					KEY_F3        : begin KM[7][6] <= key_status; end    // KEY_F3        
@@ -218,7 +244,6 @@ always @(posedge clk) begin
 					KEY_T         : begin KM[2][6] <= key_status; end    // KEY_T         
 					KEY_F         : begin KM[2][5] <= key_status; end    // KEY_F         
 				*/
-					KEY_C         : begin KM[2][4] <= key_status; end    // KEY_C         
 				/*	
 					KEY_X         : begin KM[2][3] <= key_status; end    // KEY_X         
 					KEY_D         : begin KM[2][2] <= key_status; end    // KEY_D         
@@ -241,26 +266,3 @@ always @(posedge clk) begin
 					KEY_CLR_HOME  : begin KM[0][1] <= key_status; end    // KEY_CLR_HOME  
 					KEY_1         : begin KM[0][0] <= key_status; end    // KEY_1         
 				*/
-				endcase
-			end
-		end		
-	end
-end
-
-// the ps2 decoder has been taken from the zx spectrum core
-ps2_intf ps2_keyboard (
-	.CLK		 ( clk       ),
-	.nRESET	 ( !reset    ),
-	
-	// PS/2 interface
-	.PS2_CLK  ( ps2_clk   ),
-	.PS2_DATA ( ps2_data  ),
-	
-	// Byte-wide data interface - only valid for one clock
-	// so must be latched externally if required
-	.DATA		  ( kdata  ),
-	.VALID	  ( valid  ),
-	.ERROR	  ( error  )
-);
-
-endmodule

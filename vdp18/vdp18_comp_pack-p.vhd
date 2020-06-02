@@ -19,7 +19,7 @@ package vdp18_comp_pack is
 
   component vdp18_clk_gen
     port (
-      clock_i       : in  std_logic;
+      clk_i         : in  std_logic;
       clk_en_10m7_i : in  std_logic;
       reset_i       : in  boolean;
       clk_en_5m37_o : out boolean;
@@ -28,34 +28,30 @@ package vdp18_comp_pack is
     );
   end component;
 
-	component vdp18_hor_vert
-	port (
-		clock_i       : in  std_logic;
-		clk_en_5m37_i : in  boolean;
-		reset_i       : in  boolean;
-		opmode_i      : in  opmode_t;
-		ntsc_pal_i		: in  std_logic;
-		num_pix_o     : out hv_t;
-		num_line_o    : out hv_t;
-		vert_inc_o    : out boolean;
-		hsync_n_o     : out std_logic;
-		vsync_n_o     : out std_logic;
-		blank_o       : out boolean;
-		cnt_hor_o		: out std_logic_vector(8 downto 0);
-		cnt_ver_o		: out std_logic_vector(7 downto 0)
-	);
-	end component;
-
-  component vdp18_ctrl
+  component vdp18_hor_vert
+    generic (
+      is_pal_g      : integer := 0
+    );
     port (
-      clock_i       : in  std_logic;
+      clk_i         : in  std_logic;
       clk_en_5m37_i : in  boolean;
       reset_i       : in  boolean;
       opmode_i      : in  opmode_t;
-		vram_read_i		: in  boolean;
-		vram_write_i	: in  boolean;
-		vram_ce_o		: out std_logic;
-		vram_oe_o		: out std_logic;
+      num_pix_o     : out hv_t;
+      num_line_o    : out hv_t;
+      vert_inc_o    : out boolean;
+      hsync_n_o     : out std_logic;
+      vsync_n_o     : out std_logic;
+      blank_o       : out boolean
+    );
+  end component;
+
+  component vdp18_ctrl
+    port (
+      clk_i         : in  std_logic;
+      clk_en_5m37_i : in  boolean;
+      reset_i       : in  boolean;
+      opmode_i      : in  opmode_t;
       num_pix_i     : in  hv_t;
       num_line_i    : in  hv_t;
       vert_inc_i    : in  boolean;
@@ -72,7 +68,7 @@ package vdp18_comp_pack is
 
   component vdp18_cpuio
     port (
-      clock_i       : in  std_logic;
+      clk_i         : in  std_logic;
       clk_en_10m7_i : in  boolean;
       clk_en_acc_i  : in  boolean;
       reset_i       : in  boolean;
@@ -84,8 +80,6 @@ package vdp18_comp_pack is
       cd_oe_o       : out std_logic;
       access_type_i : in  access_t;
       opmode_o      : out opmode_t;
-		vram_read_o		: out boolean;
-		vram_write_o	: out boolean;
       vram_we_o     : out std_logic;
       vram_a_o      : out std_logic_vector(0 to 13);
       vram_d_o      : out std_logic_vector(0 to  7);
@@ -133,7 +127,7 @@ package vdp18_comp_pack is
 
   component vdp18_pattern
     port (
-      clock_i       : in  std_logic;
+      clk_i         : in  std_logic;
       clk_en_5m37_i : in  boolean;
       clk_en_acc_i  : in  boolean;
       reset_i       : in  boolean;
@@ -153,7 +147,7 @@ package vdp18_comp_pack is
 
   component vdp18_sprite
     port (
-      clock_i       : in  std_logic;
+      clk_i         : in  std_logic;
       clk_en_5m37_i : in  boolean;
       clk_en_acc_i  : in  boolean;
       reset_i       : in  boolean;
@@ -183,7 +177,7 @@ package vdp18_comp_pack is
       compat_rgb_g  : integer := 0
     );
     port (
-      clock_i       : in  std_logic;
+      clk_i         : in  std_logic;
       clk_en_5m37_i : in  boolean;
       reset_i       : in  boolean;
       vert_active_i : in  boolean;

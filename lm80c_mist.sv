@@ -166,6 +166,7 @@ keyboard keyboard
 	
 	.port_A   ( port_A    ),
 	.port_B   ( port_B    ),
+	
 	.reset_key( reset_key )	
 );
 
@@ -320,6 +321,9 @@ wire ROM_SEL = ~A[15] & ~MREQ;
 /******************************************************************************************/
 /******************************************************************************************/
 
+// this TMS9918A implementation is from 
+// https://github.com/wsoltys/mist-cores/tree/master/fpga_colecovision/src/vdp18
+
 wire VDP_INT;
 
 wire vdp_hs;
@@ -347,10 +351,17 @@ wire [0:7]  vram_dout;
 
 wire [7:0] vdp_dout;
 		
-vdp18_core vdp
+vdp18_core
+/* 
+#(
+	.is_pal_g(0),     // NTSC
+	.compat_rgb_(0)
+) 
+*/
+vdp
 (
-	.clock_i       ( CLOCK       ),
-	.clk_en_10m7_i ( vdp_clk     ),
+	.clk_i         ( vdp_clk     ),
+	.clk_en_10m7_i ( 1           ),
 
 	.reset_n_i     ( ~RESET      ),
 	
@@ -364,8 +375,6 @@ vdp18_core vdp
    .cd_i          ( cpu_dout    ),
    .cd_o          ( vdp_dout    ),
 		
-	.vram_ce_o		( vram_ce     ),
-	.vram_oe_o		( vram_oe     ),
    .vram_we_o     ( vram_we     ),
    .vram_a_o      ( vram_a      ),
    .vram_d_o      ( vram_din    ),
@@ -553,7 +562,9 @@ sdram sdram (
 wire cpu_ena   = ~boot_completed | is_downloading | eraser_busy;
 
 // reset while booting or when the physical reset key is pressed
-wire RESET = ~boot_completed | reset_key; 
+wire RESET = ~boot_completed;// | reset_key; 
+
+assign debug = reset_key;
 
 
 /******************************************************************************************/
@@ -585,16 +596,10 @@ end
 /******************************************************************************************/
 /******************************************************************************************/
 
-wire debug = 0;
+wire debug;
 
-// debug keyboard on the LED
-always @(posedge CLOCK) begin
-	LED_ON <= debug;
-end
-
-reg LED_ON = 0;
-
-assign LED = ~LED_ON;
+assign LED = ~debug;
 
 
 endmodule
+
