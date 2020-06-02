@@ -5,6 +5,11 @@
 // Derived from source code by Till Harbaum (c) 2015
 //
 
+// Uppercase names are the one defined in the LM80C.pdf schematic
+// There are also some FPGA uppercase PIN names
+
+
+
 // TODO audio
 // TODO add scandoubler/scanlines
 // TODO YPbPr
@@ -57,6 +62,45 @@ module lm80c_mist
 /******************************************************************************************/
 /******************************************************************************************/
 
+// on screen display
+
+wire [5:0] osd_r;
+wire [5:0] osd_g;
+wire [5:0] osd_b;
+
+osd osd (
+   .clk_sys    ( vdp_clk    ),	
+
+   // spi for OSD
+   .SPI_DI     ( SPI_DI     ),
+   .SPI_SCK    ( SPI_SCK    ),
+   .SPI_SS3    ( SPI_SS3    ),
+
+   .R_in       ( vdp_r      ),
+   .G_in       ( vdp_g      ),
+   .B_in       ( vdp_b      ),
+	
+   .HSync      ( vdp_hs     ),
+   .VSync      ( vdp_vs     ),
+	
+   .R_out      ( osd_r      ),
+   .G_out      ( osd_g      ),
+   .B_out      ( osd_b      )   
+);
+
+assign VGA_R = osd_r;
+assign VGA_G = osd_g;
+assign VGA_B = osd_b;
+assign VGA_HS = ~(~vdp_hs | ~vdp_vs);
+assign VGA_VS = 1;
+
+
+/******************************************************************************************/
+/******************************************************************************************/
+/***************************************** @user_io ***************************************/
+/******************************************************************************************/
+/******************************************************************************************/
+       
 // menu configuration string passed to user_io
 localparam CONF_STR = {
 	"LM80C;PRG;", // must be UPPERCASE
@@ -69,42 +113,14 @@ wire [7:0] status;       // the status register is controlled by the user_io mod
 
 wire st_power_on = status[0];
 wire st_reset    = status[3];
-
-// on screen display
-
-osd osd (
-   .clk_sys    ( F14M         ),	
-
-   // spi for OSD
-   .SPI_DI     ( SPI_DI       ),
-   .SPI_SCK    ( SPI_SCK      ),
-   .SPI_SS3    ( SPI_SS3      ),
-
-   .R_in       ( video_r      ),
-   .G_in       ( video_g      ),
-   .B_in       ( video_b      ),
-   .HSync      ( video_hs     ),
-   .VSync      ( video_vs     ),
-
-   .R_out      ( VGA_R        ),
-   .G_out      ( VGA_G        ),
-   .B_out      ( VGA_B        )   
-);
-
-
-/******************************************************************************************/
-/******************************************************************************************/
-/***************************************** @user_io ***************************************/
-/******************************************************************************************/
-/******************************************************************************************/
-       
+		 
 wire [31:0] joystick_0;
 wire [31:0] joystick_1;
 
 user_io #
 (
 	.STRLEN(CONF_STR_LEN),
-	.PS2DIV(100)
+	.PS2DIV(25)
 )
 user_io ( 
 	.conf_str   ( CONF_STR   ),
@@ -116,17 +132,12 @@ user_io (
 
 	.status     ( status     ),
 	
-	.clk_sys    ( F14M ),
-	.clk_sd     ( F14M ),
+	.clk_sys    ( CLOCK ),
+	.clk_sd     ( CLOCK ),
 	 
 	// ps2 interface
 	.ps2_kbd_clk    ( ps2_kbd_clk    ),
-	.ps2_kbd_data   ( ps2_kbd_data   ),
-	
-	/*
-	.ps2_mouse_clk  ( ps2_mouse_clk  ),
-	.ps2_mouse_data ( ps2_mouse_data ),
-	*/ 
+	.ps2_kbd_data   ( ps2_kbd_data   ),	
 	
 	.joystick_0 ( joystick_0 ),
 	.joystick_1 ( joystick_1 ),
@@ -149,24 +160,23 @@ wire   [31:0] img_size;    // size of image in bytes
 wire ps2_kbd_clk;
 wire ps2_kbd_data;
 
-wire [ 6:0] KD;
+wire [ 7:0] port_B;
 wire        reset_key;
 
 keyboard keyboard 
 (
-	.reset    ( !pll_locked ),
-	.clk      ( F14M  ),
+	.reset    ( !pll_locked  ),
+	.clk      ( CLOCK        ),
 
 	.ps2_clk  ( ps2_kbd_clk  ),
 	.ps2_data ( ps2_kbd_data ),
 	
-	.address  ( cpu_addr  ),
-	.KD       ( KD        ),
+	.port_A   ( port_A    ),
+	.port_B   ( port_B    ),
 	.reset_key( reset_key )	
 );
 
-
-		 
+		
 /******************************************************************************************/
 /******************************************************************************************/
 /***************************************** @downloader ************************************/
@@ -195,14 +205,12 @@ downloader downloader (
    .ROM_done    ( boot_completed  ),	
 	         
    // external ram interface
-   .clk   ( F14M          ),
+   .clk   ( CLOCK         ),
    .wr    ( download_wr   ),
    .addr  ( download_addr ),
    .data  ( download_data )
 );
 
-
-wire [2:0] hcnt;
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -216,8 +224,8 @@ wire [24:0] eraser_addr;
 wire [7:0]  eraser_data;
 
 eraser eraser(
-	.clk      ( F14M        ),
-	.ena      ( hcnt == 6   ),
+	.clk      ( CLOCK       ),
+	.ena      ( 1           ),
 	.trigger  ( st_reset    ),	
 	.erasing  ( eraser_busy ),
 	.wr       ( eraser_wr   ),
@@ -226,29 +234,6 @@ eraser eraser(
 );
 
 
-/*
-scandoubler scandoubler (
-	.clk_sys( F14M ),
-
-	
-	// scanlines (00-none 01-25% 10-50% 11-75%)
-	//input      [1:0] scanlines,
-	//input            ce_x1,
-	//input            ce_x2,
-		
-	.hs_in ( video_hs ),
-	.vs_in ( video_vs ),
-	.r_in  ( osd_r_out ),
-	.g_in  ( osd_g_out ),
-	.b_in  ( osd_b_out ),
-	
-	.hs_out( scandoubler_hs_out ),
-	.vs_out( scandoubler_vs_out ),
-	.r_out ( scandoubler_r_out  ),
-	.g_out ( scandoubler_r_out  ),
-	.b_out ( scandoubler_r_out  )
-);
-*/
 	
 /******************************************************************************************/
 /******************************************************************************************/
@@ -261,11 +246,8 @@ scandoubler scandoubler (
 //
 	
 // CPU control signals
-wire        CPUCK;          // CPU Clock not used yet
 wire        CPUENA;         // CPU enable
-wire        WAIT;           // CPU WAIT 
-wire [15:0] cpu_addr;
-wire [7:0]  cpu_din;
+wire [15:0] A;
 wire [7:0]  cpu_dout;
 wire        cpu_rd_n;
 wire        cpu_wr_n;
@@ -273,110 +255,214 @@ wire        cpu_mreq_n;
 wire        cpu_m1_n;
 wire        cpu_iorq_n;
 
+// use names defined in the schematic
+wire WR;
+wire RD;
+wire IORQ;
+wire M1;
 
-// this was taken from https://github.com/sorgelig/Amstrad_MiST by sorgelig
+// t80cpu was taken from https://github.com/sorgelig/Amstrad_MiST by sorgelig
 
 t80pa cpu
 (
 	.reset_n ( ~CPU_RESET    ),  
 	
-	.clk     ( F14M          ),   
+	.clk     ( CLOCK         ),   
 	.cen_p   ( CPUENA        ),   // CPU enable (positive edge)
 	.cen_n   ( ~CPUENA       ),   // CPU enable (negative edge)
 
-	.a       ( cpu_addr      ),   // 16 bit address bus
-	.DO      ( cpu_dout      ),   // 8 bit data bus (output)
-	.di      ( cpu_din       ),   // 8 bit data bus (input)
+	.a       ( A             ),   
+	.DO      ( cpu_dout      ),   
+	.di      ( cpu_din       ),   
 	
-	.rd_n    ( cpu_rd_n      ),   // READ       0=cpu reads
-	.wr_n    ( cpu_wr_n      ),   // WRITE      0=cpu writes
+	.rd_n    ( RD            ),   
+	.wr_n    ( WR            ),   
 	
-	.iorq_n  ( cpu_iorq_n    ),   // IO REQUEST 0=read from I/O
-	.mreq_n  ( cpu_mreq_n    ),   // MEMORY REQUEST, idicates the bus has a valid memory address
-	.m1_n    ( 1'b1          ),   // connected to expansion port on the Laser 500
-	.rfsh_n  ( 1'b1          ),   // connected to expansion port on the Laser 500
+	.iorq_n  ( cpu_iorq_n    ),   
+	.mreq_n  ( MREQ          ),   
 
-	.busrq_n ( 1'b1          ),   // connected to VCC on the Laser 500
-	.int_n   ( video_vs      ),   // VSYNC interrupt
-	.nmi_n   ( 1'b1          ),   // connected to VCC on the Laser 500
-	.wait_n  ( ~WAIT         )    // 
-	
+	.int_n   ( INT           ),   
+	.nmi_n   ( VDP_INT       ),   
+
+	.m1_n    ( M1            ),   
+	.rfsh_n  ( 0             ),   
+	.busrq_n ( 1             ),   
+	.wait_n  ( 1             )    
 );
 
 
 /******************************************************************************************/
 /******************************************************************************************/
-/***************************************** @vdc *******************************************/
+/***************************************** @address decoder********************************/
+/******************************************************************************************/
+/******************************************************************************************/
+ 
+wire PIO_SEL = (A[7:4] == 'b0000) & (MREQ & ~IORQ);
+wire CTC_SEL = (A[7:4] == 'b0001) & (MREQ & ~IORQ);
+wire SIO_SEL = (A[7:4] == 'b0010) & (MREQ & ~IORQ);
+wire VDP_SEL = (A[7:4] == 'b0011) & (MREQ & ~IORQ);
+wire PSG_SEL = (A[7:4] == 'b0100) & (MREQ & ~IORQ);
+
+wire U20A = ~IORQ | VDP_SEL;
+ 
+wire CSR = RD | U20A;
+wire CSW = WR | U20A;
+
+wire BDIR = WR | PSG_SEL;
+wire BC   = A[0] | PSG_SEL;
+
+wire [7:0] cpu_din = (
+	PIO_SEL ? 0 :
+	CTC_SEL ? 0 :
+	SIO_SEL ? 0 :
+	VDP_SEL ? vdp_dout :
+	PSG_SEL ? psg_dout : sdram_dout	
+);
+
+wire RAM_SEL =  A[15] & ~MREQ;
+wire ROM_SEL = ~A[15] & ~MREQ;
+
+/******************************************************************************************/
+/******************************************************************************************/
+/***************************************** @vdp *******************************************/
 /******************************************************************************************/
 /******************************************************************************************/
 
-//
-// VTL CHIP GA1
-//
-					
-wire       F3M;					
-wire       F14M;
-wire [5:0] video_r;
-wire [5:0] video_g; 
-wire [5:0] video_b;
-wire       video_hs;
-wire       video_vs;
+wire VDP_INT;
 
-wire [24:0] vdc_sdram_addr; 
-wire        vdc_sdram_wr;
-wire        vdc_sdram_rd;
-wire  [7:0] vdc_sdram_din;
-		  
-// VTL custom chip
-VTL_chip VTL_chip 
-(	
-	.F14M   ( F14M        ),
-	.RESET  ( ~pll_locked ),
-	.BLANK  ( BLANK       ),		
-	
-	// cpu
-   .CPUCK    ( CPUCK         ),
-	.CPUENA   ( CPUENA        ),
-	.MREQ_n   ( cpu_mreq_n    ),	
-	.IORQ_n   ( cpu_iorq_n    ),
-	.RD_n     ( cpu_rd_n      ), 
-	.WR_n     ( cpu_wr_n      ),
-	.A        ( cpu_addr      ),
-	.DI       ( cpu_din       ),
-	.DO       ( cpu_dout      ),
+wire vdp_hs;
+wire vdp_vs;
+
+wire [0:7] vdp_r_;		
+wire [0:7] vdp_g_;
+wire [0:7] vdp_b_;
+
+wire [0:5] vdp_r__ = vdp_r_[2:5];		
+wire [0:5] vdp_g__ = vdp_g_[2:5];
+wire [0:5] vdp_b__ = vdp_b_[2:5];
+
+wire [5:0] vdp_r = vdp_r__;
+wire [5:0] vdp_g = vdp_g__;
+wire [5:0] vdp_b = vdp_b__;
+
+wire vram_ce;
+wire vram_oe;
+wire vram_we;
+
+wire [0:13] vram_a;        
+wire [0:7]  vram_din;      // TODO attenzione agli indici invertiti!?
+wire [0:7]  vram_dout;
+
+wire [7:0] vdp_dout;
 		
-	// video
-	.hsync  ( video_hs    ),
-	.vsync  ( video_vs    ),
-	.r      ( video_r     ),
-	.g      ( video_g     ),
-	.b      ( video_b     ),
+vdp18_core vdp
+(
+	.clock_i       ( CLOCK       ),
+	.clk_en_10m7_i ( vdp_clk     ),
+
+	.reset_n_i     ( ~CPU_RESET  ),
 	
-	//	SDRAM interface
-	.sdram_addr   ( vdc_sdram_addr   ), 
-	.sdram_din    ( vdc_sdram_din    ),
-	.sdram_rd     ( vdc_sdram_rd     ),
-	.sdram_wr     ( vdc_sdram_wr     ),
-	.sdram_dout   ( sdram_dout       ), 
+   .csr_n_i       ( CSR         ),
+   .csw_n_i       ( CSW         ),
 	
-	.joystick_0   ( joystick_0 ),
-	.joystick_1   ( joystick_1 ),
+   .mode_i        ( A[1] ),
+		
+   .int_n_o       ( VDP_INT     ),
 	
-	.KD           ( KD      ),	
-	.BUZZER       ( BUZZER  ),
-	.CASOUT       ( CASOUT  ),
-	.CASIN        ( CASIN   ),
+   .cd_i          ( cpu_dout    ),
+   .cd_o          ( vdp_dout    ),
+		
+	.vram_ce_o		( vram_ce     ),
+	.vram_oe_o		( vram_oe     ),
+   .vram_we_o     ( vram_we     ),
+   .vram_a_o      ( vram_a      ),
+   .vram_d_o      ( vram_din    ),
+   .vram_d_i      ( vram_dout   ),
 	
-	.cnt          ( hcnt ),
+   .rgb_r_o       ( vdp_r_  ),
+   .rgb_g_o       ( vdp_g_  ),
+   .rgb_b_o       ( vdp_b_  ),
 	
-	.img_mounted  ( img_mounted ),
-	.img_size     ( img_size    ) 
+   .hsync_n_o     ( vdp_hs ),
+   .vsync_n_o     ( vdp_vs )
 
 );
 
-// TODO add scandoubler
-assign VGA_HS = ~(~video_hs | ~video_vs);   // ~(hs ^ vs)
-assign VGA_VS = 1;
+vram vram
+(
+  .address( vram_a    ),
+  .clock  ( vpd_clk   ),
+  .data   ( vram_din  ),                       
+  .wren   ( vram_we   ),                       
+  .q      ( vram_dout )
+);
+
+/******************************************************************************************/
+/******************************************************************************************/
+/***************************************** @psg *******************************************/
+/******************************************************************************************/
+/******************************************************************************************/
+
+wire [7:0] CHANNEL_A; // PSG Output channel A
+wire [7:0] CHANNEL_B; // PSG Output channel B
+wire [7:0] CHANNEL_C; // PSG Output channel C
+
+wire [7:0] psg_dout;
+
+AY8912 AY8912
+(
+	.CLK   ( CLK2        ),
+	.CE    ( 1           ),
+	.RESET ( CPU_RESET   ),
+	.BDIR  ( BDIR        ),
+	.BC    ( BC          ),
+	
+	.CHANNEL_A( CHANNEL_A ),
+	.CHANNEL_B( CHANNEL_B ),
+	.CHANNEL_C( CHANNEL_C ),
+	
+	.DI( cpu_dout ),
+	.DO( psg_dout ),
+	
+);
+
+/*
+module AY8912
+(
+   input        SEL,
+	input  [7:0] IO_in,
+	output [7:0] IO_out
+);
+*/
+
+/******************************************************************************************/
+/******************************************************************************************/
+/***************************************** @ctc *******************************************/
+/******************************************************************************************/
+/******************************************************************************************/
+
+wire [7:0] ctc_dout;
+wire INT;
+
+z80ctc_top z80ctc_top
+(
+	.clock     ( CLOCK      ),
+	.clock_ena ( 1          ),
+	.reset     ( CPU_RESET  ),
+	.din       ( cpu_dout   ),
+	.dout      ( ctc_dout   ),
+	.cpu_din   ( cpu_din    ),
+	.ce_n      ( CTC_SEL    ),
+	.cs        ( A[1:0]     ),
+	.m1_n      ( cpu_m1_n   ),
+	.iorq_n    ( cpu_iorq_n ),
+	.rd_n      ( cpu_rd_n   ),
+   .int_n     ( INT        )
+	
+	// trigger 0-3 are not connected
+	// daisy chain not available in this Z80CTC implementation
+);
+
 
 
 /******************************************************************************************/
@@ -386,18 +472,18 @@ assign VGA_VS = 1;
 /******************************************************************************************/
 
 wire pll_locked;
-wire vdc_clk;
+wire vdp_clk;
 wire ram_clk;
-wire cpu_clk;
-wire psg_clk;
+wire CLOCK;
+wire CLK2;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     // PLL is running stable
-	 .c0     ( vdc_clk     ),     // 10.738635 MHz
-	 .c1     ( ram_clk     ),     // cpu_clk * 8
-	 .c2     ( cpu_clk     ),     // 3.686400 MHz
-	 .c3     ( psg_clk     )      // cpu_clk / 2
+	 .c0     ( vdp_clk     ),     // 10.738635 MHz
+	 .c1     ( ram_clk     ),     // CLOCK * 8
+	 .c2     ( CLOCK       ),     // 3.686400 MHz
+	 .c3     ( CLK2        )      // CLOCK / 2 for the PSG
 );
 
 
@@ -406,12 +492,7 @@ pll pll (
 /***************************************** @sdram *****************************************/
 /******************************************************************************************/
 /******************************************************************************************/
-
-	
-//
-// RAM (SDRAM)
-//
-						
+							
 // SDRAM control signals
 assign SDRAM_CKE = pll_locked; // was: 1'b1;
 assign SDRAM_CLK = ram_clk;
@@ -436,37 +517,13 @@ always @(*) begin
 		sdram_rd     = 1'b1;		
 	end	
 	else begin
-		sdram_din    = vdc_sdram_din;
-		sdram_addr   = vdc_sdram_addr;
-		sdram_wr     = vdc_sdram_wr;
-		sdram_rd     = vdc_sdram_rd;
+		sdram_din    = cpu_dout;
+		sdram_addr   = A;
+		sdram_wr     = ~WR & ~MREQ & RAM_SEL;
+		sdram_rd     = ~RD & ~MREQ;
 	end	
 end
 
-
-assign WAIT = 0; 
-
-//wire CPU_RESET = ~boot_completed | is_downloading | eraser_busy | reset_key | reset_delayed;
-wire BLANK     = ~boot_completed | is_downloading | eraser_busy;
-
-reg CPU_RESET;
-always @(posedge F14M) begin
-	CPU_RESET <= ~boot_completed | is_downloading | eraser_busy | reset_key;
-end
-
-// keeps CPU in reset state after BLANK for 32 cycles
-reg [31:0] reset_counter;
-
-wire reset_delayed = (reset_counter > 0)  && !(reset_counter > 12000000 && reset_counter < 12500000);
-
-always @(posedge F14M) begin
-	if(BLANK) reset_counter <= 14000000;
-	else begin	
-		if(reset_counter != 0) begin
-			reset_counter <= reset_counter - 1;
-		end
-   end
-end
 
 // sdram from zx spectrum core	
 sdram sdram (
@@ -482,7 +539,7 @@ sdram sdram (
 
    // system interface
    .clk            ( ram_clock                 ),
-   .clkref         ( cpu_clk                   ),
+   .clkref         ( CLOCK                     ),
    .init           ( !pll_locked               ),
 
    // cpu interface	
@@ -494,6 +551,32 @@ sdram sdram (
 );
 
 
+/******************************************************************************************/
+/******************************************************************************************/
+/***************************************** @reset *****************************************/
+/******************************************************************************************/
+/******************************************************************************************/
+
+wire BLANK     = ~boot_completed | is_downloading | eraser_busy;
+
+reg CPU_RESET;
+always @(posedge CLOCK) begin
+	CPU_RESET <= ~boot_completed | is_downloading | eraser_busy | reset_key;
+end
+
+// keeps CPU in reset state after BLANK for 32 cycles
+reg [31:0] reset_counter;
+
+wire reset_delayed = (reset_counter > 0)  && !(reset_counter > 12000000 && reset_counter < 12500000);
+
+always @(posedge CLOCK) begin
+	if(BLANK) reset_counter <= 14000000;
+	else begin	
+		if(reset_counter != 0) begin
+			reset_counter <= reset_counter - 1;
+		end
+   end
+end
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -506,19 +589,17 @@ wire audio;
 // TODO audio 
 dac #(.C_bits(16)) dac_AUDIO_L
 (
-	.clk_i(cpu_clk),
-   .res_n_i(pll_locked),	
-	.dac_i({ 16'b0 }),
-	.dac_o(audio)
+	.clk_i  ( CLOCK      ),
+   .res_n_i( pll_locked ),	
+	.dac_i  ( { 16'b0 }  ),
+	.dac_o  ( audio      )
 );
 
-always @(posedge F14M) begin
+always @(posedge CLOCK) begin
 	AUDIO_L <= audio;
 	AUDIO_R <= audio;
 end
 
-
-endmodule
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -529,10 +610,13 @@ endmodule
 wire debug = 0;
 
 // debug keyboard on the LED
-always @(posedge F14M) begin
+always @(posedge CLOCK) begin
 	LED_ON <= debug;
 end
 
 reg LED_ON = 0;
 
 assign LED = ~LED_ON;
+
+
+endmodule
