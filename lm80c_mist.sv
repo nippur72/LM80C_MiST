@@ -91,7 +91,7 @@ osd osd (
 assign VGA_R = osd_r;
 assign VGA_G = osd_g;
 assign VGA_B = osd_b;
-assign VGA_HS = ~(~vdp_hs | ~vdp_vs);
+assign VGA_HS = vdp_hs & vdp_vs;
 assign VGA_VS = 1;
 
 
@@ -102,28 +102,25 @@ assign VGA_VS = 1;
 /******************************************************************************************/
        
 // menu configuration string passed to user_io
-localparam CONF_STR = {
+localparam conf_str = {
 	"LM80C;PRG;", // must be UPPERCASE
 	"T3,Reset"
 };
 
-localparam CONF_STR_LEN = $size(CONF_STR)>>3;
+localparam conf_str_len = $size(conf_str)>>3;
 
 wire [7:0] status;       // the status register is controlled by the user_io module
 
 wire st_power_on = status[0];
 wire st_reset    = status[3];
-		 
-wire [31:0] joystick_0;
-wire [31:0] joystick_1;
 
 user_io #
 (
-	.STRLEN(CONF_STR_LEN),
-	.PS2DIV(25)
+	.STRLEN(conf_str_len),
+	.PS2DIV(24)              // CLOCK / 25 approx = 15 Khz
 )
 user_io ( 
-	.conf_str   ( CONF_STR   ),
+	.conf_str   ( conf_str   ),
 
 	.SPI_CLK    ( SPI_SCK    ),
 	.SPI_SS_IO  ( CONF_DATA0 ),
@@ -133,14 +130,11 @@ user_io (
 	.status     ( status     ),
 	
 	.clk_sys    ( CLOCK ),
-	.clk_sd     ( CLOCK ),
+	.clk_sd     ( CLOCK ),       // sd card clock
 	 
 	// ps2 interface
 	.ps2_kbd_clk    ( ps2_kbd_clk    ),
 	.ps2_kbd_data   ( ps2_kbd_data   ),	
-	
-	.joystick_0 ( joystick_0 ),
-	.joystick_1 ( joystick_1 ),
 	
 	.img_mounted( img_mounted ),
 	.img_size   ( img_size    ) 
@@ -148,7 +142,6 @@ user_io (
 
 wire          img_mounted; //rising edge if a new image is mounted
 wire   [31:0] img_size;    // size of image in bytes
-
 
 
 /******************************************************************************************/
@@ -246,7 +239,6 @@ eraser eraser(
 //
 	
 // CPU control signals
-wire        CPUENA;         // CPU enable
 wire [15:0] A;
 wire [7:0]  cpu_dout;
 wire        cpu_rd_n;
@@ -265,11 +257,11 @@ wire M1;
 
 t80pa cpu
 (
-	.reset_n ( ~CPU_RESET    ),  
+	.reset_n ( ~RESET        ),  
 	
 	.clk     ( CLOCK         ),   
-	.cen_p   ( CPUENA        ),   // CPU enable (positive edge)
-	.cen_n   ( ~CPUENA       ),   // CPU enable (negative edge)
+	.cen_p   ( cpu_ena       ),   // CPU enable (positive edge)
+	.cen_n   ( ~cpu_ena      ),   // CPU enable (negative edge)
 
 	.a       ( A             ),   
 	.DO      ( cpu_dout      ),   
@@ -360,7 +352,7 @@ vdp18_core vdp
 	.clock_i       ( CLOCK       ),
 	.clk_en_10m7_i ( vdp_clk     ),
 
-	.reset_n_i     ( ~CPU_RESET  ),
+	.reset_n_i     ( ~RESET      ),
 	
    .csr_n_i       ( CSR         ),
    .csw_n_i       ( CSW         ),
@@ -413,7 +405,7 @@ AY8912 AY8912
 (
 	.CLK   ( CLK2        ),
 	.CE    ( 1           ),
-	.RESET ( CPU_RESET   ),
+	.RESET ( RESET       ),
 	.BDIR  ( BDIR        ),
 	.BC    ( BC          ),
 	
@@ -448,7 +440,7 @@ z80ctc_top z80ctc_top
 (
 	.clock     ( CLOCK      ),
 	.clock_ena ( 1          ),
-	.reset     ( CPU_RESET  ),
+	.reset     ( RESET      ),
 	.din       ( cpu_dout   ),
 	.dout      ( ctc_dout   ),
 	.cpu_din   ( cpu_din    ),
@@ -557,26 +549,12 @@ sdram sdram (
 /******************************************************************************************/
 /******************************************************************************************/
 
-wire BLANK     = ~boot_completed | is_downloading | eraser_busy;
+// stops the cpu when booting, downloading or erasing
+wire cpu_ena   = ~boot_completed | is_downloading | eraser_busy;
 
-reg CPU_RESET;
-always @(posedge CLOCK) begin
-	CPU_RESET <= ~boot_completed | is_downloading | eraser_busy | reset_key;
-end
+// reset while booting or when the physical reset key is pressed
+wire RESET = ~boot_completed | reset_key; 
 
-// keeps CPU in reset state after BLANK for 32 cycles
-reg [31:0] reset_counter;
-
-wire reset_delayed = (reset_counter > 0)  && !(reset_counter > 12000000 && reset_counter < 12500000);
-
-always @(posedge CLOCK) begin
-	if(BLANK) reset_counter <= 14000000;
-	else begin	
-		if(reset_counter != 0) begin
-			reset_counter <= reset_counter - 1;
-		end
-   end
-end
 
 /******************************************************************************************/
 /******************************************************************************************/
