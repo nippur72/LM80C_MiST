@@ -518,6 +518,12 @@ always @(*) begin
 		sdram_wr     = eraser_wr;
 		sdram_rd     = 1'b1;		
 	end	
+	else if(debugger_busy) begin		
+		sdram_din     = debug_data_wr;		
+		sdram_addr    = debug_addr;
+		sdram_wr      = debug_wr;
+		sdram_rd      = 1'b1;		
+	end	
 	else begin
 		sdram_din    = cpu_dout;
 		sdram_addr   = A;
@@ -560,13 +566,11 @@ sdram sdram (
 /******************************************************************************************/
 
 // stops the cpu when booting, downloading or erasing
-wire cpu_ena = ~boot_completed | is_downloading | eraser_busy;
+wire cpu_ena = ~boot_completed | is_downloading | eraser_busy | debugger_busy;
 
 // reset while booting or when the physical reset key is pressed
 // RESET is low active and goes into: t80a, vdp, psg, ctc
 wire RESET = ~(~boot_completed | reset_key); 
-
-assign debug = reset_key;
 
 
 /******************************************************************************************/
@@ -600,9 +604,52 @@ end
 /******************************************************************************************/
 /******************************************************************************************/
 
-wire debug;
+
+reg        debugger_busy;
+wire       debug_done;
+wire [7:0] debug_data_rd;
+reg  [7:0] debug_data_wr;
+reg [15:0] debug_addr;
+reg        debug_wr;
+
+reg  [7:0] debug_counter;
+reg  [7:0] debug_ok;
+
+wire ready = RESET;  // negated logic
+
+reg debug;
 
 assign LED = ~debug;
+
+always @(posedge CLOCK) begin
+	if(!ready) begin
+		debugger_busy <= 0;	
+		debug_addr    <= 'hffff;
+		debug_counter <= 0;
+		debug_done    <= 0;
+		debug         <= 0;
+	end
+	else begin
+		if(!debug_done) begin
+			debugger_busy <= 1;
+			debug_addr    <= debug_addr + 1;
+			debug_wr      <= 0;
+			
+			if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
+			if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
+			if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
+			if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
+
+			if(debug_addr == 4) begin
+				debugger_busy <= 0;
+				debug_done <= 1;
+			end
+			
+			if(debug_counter == 4) debug <= 1;
+		end
+	end
+end
+
 
 endmodule
 
