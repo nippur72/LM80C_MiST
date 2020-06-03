@@ -5,8 +5,9 @@
 // Derived from source code by Till Harbaum (c) 2015
 //
 
-// Uppercase names are the one defined in the LM80C.pdf schematic
-// There are also some FPGA uppercase PIN names
+// Uppercase names are symbols defined in the official LM80C.pdf schematic
+//
+// (FPGA pins are also uppercase)
 
 
 
@@ -14,6 +15,11 @@
 // TODO add scandoubler/scanlines
 // TODO YPbPr
 // TODO true/ita keyboard
+// TODO modify BASTXT and PRGEND vectors in downloader
+
+
+
+// top level module
 								   
 module lm80c_mist
 ( 
@@ -69,7 +75,7 @@ wire [5:0] osd_g;
 wire [5:0] osd_b;
 
 osd osd (
-   .clk_sys    ( vdp_clk    ),	
+   .clk_sys    ( vdp_clock  ),	
 
    // spi for OSD
    .SPI_DI     ( SPI_DI     ),
@@ -117,7 +123,7 @@ wire st_reset    = status[3];
 user_io #
 (
 	.STRLEN(conf_str_len),
-	.PS2DIV(24)              // CLOCK / 25 approx = 15 Khz
+	.PS2DIV(24)              // ps2 clock divider: CLOCK / 24 must be approx = 15 Khz
 )
 user_io ( 
 	.conf_str   ( conf_str   ),
@@ -136,6 +142,7 @@ user_io (
 	.ps2_kbd_clk    ( ps2_kbd_clk    ),
 	.ps2_kbd_data   ( ps2_kbd_data   ),	
 	
+	// sd card interface
 	.img_mounted( img_mounted ),
 	.img_size   ( img_size    ) 
 );
@@ -153,8 +160,9 @@ wire   [31:0] img_size;    // size of image in bytes
 wire ps2_kbd_clk;
 wire ps2_kbd_data;
 
-wire [ 7:0] port_B;
-wire        reset_key;
+reg  [7:0] port_A;
+wire [7:0] port_B;
+wire       reset_key;
 
 keyboard keyboard 
 (
@@ -242,23 +250,17 @@ eraser eraser(
 // CPU control signals
 wire [15:0] A;
 wire [7:0]  cpu_dout;
-wire        cpu_rd_n;
-wire        cpu_wr_n;
-wire        cpu_mreq_n;
-wire        cpu_m1_n;
-wire        cpu_iorq_n;
-
-// use names defined in the schematic
 wire WR;
 wire RD;
 wire IORQ;
+wire MREQ;
 wire M1;
 
 // t80cpu was taken from https://github.com/sorgelig/Amstrad_MiST by sorgelig
 
 t80pa cpu
 (
-	.reset_n ( ~RESET        ),  
+	.reset_n ( RESET         ),  
 	
 	.clk     ( CLOCK         ),   
 	.cen_p   ( cpu_ena       ),   // CPU enable (positive edge)
@@ -271,7 +273,7 @@ t80pa cpu
 	.rd_n    ( RD            ),   
 	.wr_n    ( WR            ),   
 	
-	.iorq_n  ( cpu_iorq_n    ),   
+	.iorq_n  ( IORQ          ),   
 	.mreq_n  ( MREQ          ),   
 
 	.int_n   ( INT           ),   
@@ -360,10 +362,10 @@ vdp18_core
 */
 vdp
 (
-	.clk_i         ( vdp_clk     ),
+	.clk_i         ( vdp_clock   ),
 	.clk_en_10m7_i ( 1           ),
 
-	.reset_n_i     ( ~RESET      ),
+	.reset_n_i     ( RESET       ),
 	
    .csr_n_i       ( CSR         ),
    .csw_n_i       ( CSW         ),
@@ -392,7 +394,7 @@ vdp
 vram vram
 (
   .address( vram_a    ),
-  .clock  ( vpd_clk   ),
+  .clock  ( vdp_clock ),
   .data   ( vram_din  ),                       
   .wren   ( vram_we   ),                       
   .q      ( vram_dout )
@@ -414,7 +416,7 @@ AY8912 AY8912
 (
 	.CLK   ( CLK2        ),
 	.CE    ( 1           ),
-	.RESET ( RESET       ),
+	.RESET ( ~RESET      ),
 	.BDIR  ( BDIR        ),
 	.BC    ( BC          ),
 	
@@ -448,15 +450,15 @@ z80ctc_top z80ctc_top
 (
 	.clock     ( CLOCK      ),
 	.clock_ena ( 1          ),
-	.reset     ( RESET      ),
+	.reset     ( ~RESET     ),
 	.din       ( cpu_dout   ),
 	.dout      ( ctc_dout   ),
 	.cpu_din   ( cpu_din    ),
 	.ce_n      ( CTC_SEL    ),
 	.cs        ( A[1:0]     ),
-	.m1_n      ( cpu_m1_n   ),
-	.iorq_n    ( cpu_iorq_n ),
-	.rd_n      ( cpu_rd_n   ),
+	.m1_n      ( M1         ),
+	.iorq_n    ( IORQ       ),
+	.rd_n      ( RD         ),
    .int_n     ( INT        )
 	
 	// trigger 0-3 are not connected
@@ -472,16 +474,16 @@ z80ctc_top z80ctc_top
 /******************************************************************************************/
 
 wire pll_locked;
-wire vdp_clk;
-wire ram_clk;
+wire vdp_clock;
+wire ram_clock;
 wire CLOCK;
 wire CLK2;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     // PLL is running stable
-	 .c0     ( vdp_clk     ),     // 10.738635 MHz
-	 .c1     ( ram_clk     ),     // CLOCK * 8
+	 .c0     ( vdp_clock   ),     // 10.738635 MHz
+	 .c1     ( ram_clock   ),     // CLOCK * 8
 	 .c2     ( CLOCK       ),     // 3.686400 MHz
 	 .c3     ( CLK2        )      // CLOCK / 2 for the PSG
 );
@@ -495,7 +497,7 @@ pll pll (
 							
 // SDRAM control signals
 assign SDRAM_CKE = pll_locked; // was: 1'b1;
-assign SDRAM_CLK = ram_clk;
+assign SDRAM_CLK = ram_clock;
 
 wire [24:0] sdram_addr   ;
 wire        sdram_wr     ;
@@ -558,10 +560,11 @@ sdram sdram (
 /******************************************************************************************/
 
 // stops the cpu when booting, downloading or erasing
-wire cpu_ena   = ~boot_completed | is_downloading | eraser_busy;
+wire cpu_ena = ~boot_completed | is_downloading | eraser_busy;
 
 // reset while booting or when the physical reset key is pressed
-wire RESET = ~boot_completed;// | reset_key; 
+// RESET is low active and goes into: t80a, vdp, psg, ctc
+wire RESET = ~(~boot_completed | reset_key); 
 
 assign debug = reset_key;
 
@@ -572,20 +575,22 @@ assign debug = reset_key;
 /******************************************************************************************/
 /******************************************************************************************/
 
-wire audio;
+wire [9:0] channel_sum = CHANNEL_A + CHANNEL_B + CHANNEL_C;
+wire [15:0] dac_audio_in = { channel_sum, 6'b000000 };
+wire dac_audio_out; 
 
 // TODO audio 
 dac #(.C_bits(16)) dac_AUDIO_L
 (
-	.clk_i  ( CLOCK      ),
-   .res_n_i( pll_locked ),	
-	.dac_i  ( { 16'b0 }  ),
-	.dac_o  ( audio      )
+	.clk_i  ( CLOCK         ),
+   .res_n_i( pll_locked    ),	
+	.dac_i  ( dac_audio_in  ),
+	.dac_o  ( dac_audio_out )
 );
 
 always @(posedge CLOCK) begin
-	AUDIO_L <= audio;
-	AUDIO_R <= audio;
+	AUDIO_L <= dac_audio_out;
+	AUDIO_R <= dac_audio_out;
 end
 
 
@@ -598,7 +603,6 @@ end
 wire debug;
 
 assign LED = ~debug;
-
 
 endmodule
 
