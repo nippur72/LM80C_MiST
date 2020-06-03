@@ -428,7 +428,9 @@ AY8912 AY8912
 	.CHANNEL_C( CHANNEL_C ),
 	
 	.DI( cpu_dout ),
-	.DO( psg_dout )	
+	.DO( psg_dout ),
+
+	.SEL( 1 )
 );
 
 /*
