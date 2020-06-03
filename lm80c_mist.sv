@@ -264,11 +264,6 @@ t80pa cpu
 	
 	.clk     ( CLOCK         ), 
 
-/*	
-	.cen_p   ( cpu_ena       ),   // CPU enable (positive edge)
-	.cen_n   ( cpu_ena       ),   // CPU enable (negative edge)
-*/
-
 	.a       ( A             ),   
 	.DO      ( cpu_dout      ),   
 	.di      ( cpu_din       ),   
