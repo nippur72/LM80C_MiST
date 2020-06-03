@@ -262,9 +262,12 @@ t80pa cpu
 (
 	.reset_n ( RESET         ),  
 	
-	.clk     ( CLOCK         ),   
+	.clk     ( CLOCK         ), 
+
+/*	
 	.cen_p   ( cpu_ena       ),   // CPU enable (positive edge)
-	.cen_n   ( ~cpu_ena      ),   // CPU enable (negative edge)
+	.cen_n   ( cpu_ena       ),   // CPU enable (negative edge)
+*/
 
 	.a       ( A             ),   
 	.DO      ( cpu_dout      ),   
@@ -282,7 +285,7 @@ t80pa cpu
 	.m1_n    ( M1            ),   
 	.rfsh_n  ( 0             ),   
 	.busrq_n ( 1             ),   
-	.wait_n  ( 1             )    
+	.wait_n  ( ~cpu_ena      )    
 );
 
 
@@ -593,8 +596,8 @@ dac #(.C_bits(16)) dac_AUDIO_L
 );
 
 always @(posedge CLOCK) begin
-	AUDIO_L <= dac_audio_out;
-	AUDIO_R <= dac_audio_out;
+	AUDIO_L <= dac_audio_out ^ A[0];
+	AUDIO_R <= dac_audio_out ^ cpu_din[0];
 end
 
 
