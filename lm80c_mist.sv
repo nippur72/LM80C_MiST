@@ -306,8 +306,8 @@ wire U20A = IORQ | VDP_SEL;
 wire CSR = RD | U20A;
 wire CSW = WR | U20A;
 
-wire BDIR = WR | PSG_SEL;
-wire BC   = A[0] | PSG_SEL;
+wire BDIR = ~(WR | PSG_SEL);
+wire BC   = ~(A[0] | PSG_SEL);
 
 wire [7:0] cpu_din = (
 	PIO_SEL ? 0        :
