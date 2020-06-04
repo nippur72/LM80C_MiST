@@ -410,7 +410,13 @@ wire [7:0] CHANNEL_C; // PSG Output channel C
 
 wire [7:0] psg_dout;
 
-AY8912 AY8912
+reg  [7:0] IOA_in;
+reg  [7:0] IOB_in;
+
+wire [7:0] IOA_out;
+wire [7:0] IOB_out;
+
+YM2149 YM2149
 (
 	.CLK   ( CLK2        ),
 	.CE    ( 1           ),
@@ -425,17 +431,14 @@ AY8912 AY8912
 	.DI( cpu_dout ),
 	.DO( psg_dout ),
 
-	.SEL( 1 )
+	.SEL( 1 ),
+	
+	.IOA_in  ( IOA_in ),
+	.IOA_out ( IOA_out),
+	.IOB_in  ( IOB_in ),
+	.IOB_out ( IOB_out)
 );
 
-/*
-module AY8912
-(
-   input        SEL,
-	input  [7:0] IO_in,
-	output [7:0] IO_out
-);
-*/
 
 /******************************************************************************************/
 /******************************************************************************************/
