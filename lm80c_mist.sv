@@ -296,6 +296,10 @@ wire SIO_SEL = (A[7:4] == 'b0010) & (MREQ & ~IORQ);
 wire VDP_SEL = (A[7:4] == 'b0011) & (MREQ & ~IORQ);
 wire PSG_SEL = (A[7:4] == 'b0100) & (MREQ & ~IORQ);
 
+// debug LED on port 0x70 (112 decimal)
+wire LED_SEL = (A[7:4] == 'b0111) & (MREQ & ~IORQ);
+
+
 wire U20A = IORQ | VDP_SEL;
  
 wire CSR = RD | U20A;
@@ -596,7 +600,7 @@ dac #(.C_bits(16)) dac_AUDIO_L
 );
 
 always @(posedge CLOCK) begin
-	AUDIO_L <= dac_audio_out ^ A[0];
+	AUDIO_L <= dac_audio_out;
 	AUDIO_R <= dac_audio_out ^ cpu_din[0];
 end
 
@@ -606,6 +610,8 @@ end
 /***************************************** @debug *****************************************/
 /******************************************************************************************/
 /******************************************************************************************/
+
+
 
 
 reg        debugger_busy;
@@ -648,8 +654,13 @@ always @(posedge CLOCK) begin
 				debug_done <= 1;
 			end
 			
-			if(debug_counter == 4) debug <= 1;
+			if(debug_counter == 4) debug <= 1;					
 		end
+		
+		if(LED_SEL) begin
+			if(cpu_dout[0] == 1) debug <= ~debug;
+		end
+
 	end
 end
 
