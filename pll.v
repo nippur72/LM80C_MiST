@@ -110,17 +110,17 @@ module pll (
 		altpll_component.clk0_duty_cycle = 50,
 		altpll_component.clk0_multiply_by = 715909,
 		altpll_component.clk0_phase_shift = "0",
-		altpll_component.clk1_divide_by = 1875,
+		altpll_component.clk1_divide_by = 900000,
 		altpll_component.clk1_duty_cycle = 50,
-		altpll_component.clk1_multiply_by = 2048,
+		altpll_component.clk1_multiply_by = 715909,
 		altpll_component.clk1_phase_shift = "0",
-		altpll_component.clk2_divide_by = 1875,
+		altpll_component.clk2_divide_by = 4500000,
 		altpll_component.clk2_duty_cycle = 50,
-		altpll_component.clk2_multiply_by = 256,
+		altpll_component.clk2_multiply_by = 447443,
 		altpll_component.clk2_phase_shift = "0",
-		altpll_component.clk3_divide_by = 1875,
+		altpll_component.clk3_divide_by = 9000000,
 		altpll_component.clk3_duty_cycle = 50,
-		altpll_component.clk3_multiply_by = 128,
+		altpll_component.clk3_multiply_by = 447443,
 		altpll_component.clk3_phase_shift = "0",
 		altpll_component.compensate_clock = "CLK0",
 		altpll_component.inclk0_input_frequency = 37037,
@@ -204,9 +204,9 @@ endmodule
 // Retrieval info: PRIVATE: DUTY_CYCLE2 STRING "50.00000000"
 // Retrieval info: PRIVATE: DUTY_CYCLE3 STRING "50.00000000"
 // Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "10.738635"
-// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE1 STRING "29.491199"
-// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE2 STRING "3.686400"
-// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE3 STRING "1.843200"
+// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE1 STRING "21.477270"
+// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE2 STRING "2.684659"
+// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE3 STRING "1.342329"
 // Retrieval info: PRIVATE: EXPLICIT_SWITCHOVER_COUNTER STRING "0"
 // Retrieval info: PRIVATE: EXT_FEEDBACK_RADIO STRING "0"
 // Retrieval info: PRIVATE: GLOCKED_COUNTER_EDIT_CHANGED STRING "1"
@@ -241,9 +241,9 @@ endmodule
 // Retrieval info: PRIVATE: MULT_FACTOR3 NUMERIC "1"
 // Retrieval info: PRIVATE: NORMAL_MODE_RADIO STRING "1"
 // Retrieval info: PRIVATE: OUTPUT_FREQ0 STRING "10.73863500"
-// Retrieval info: PRIVATE: OUTPUT_FREQ1 STRING "29.49120000"
-// Retrieval info: PRIVATE: OUTPUT_FREQ2 STRING "3.68640000"
-// Retrieval info: PRIVATE: OUTPUT_FREQ3 STRING "1.84320000"
+// Retrieval info: PRIVATE: OUTPUT_FREQ1 STRING "21.47727000"
+// Retrieval info: PRIVATE: OUTPUT_FREQ2 STRING "2.68465900"
+// Retrieval info: PRIVATE: OUTPUT_FREQ3 STRING "1.34232900"
 // Retrieval info: PRIVATE: OUTPUT_FREQ_MODE0 STRING "1"
 // Retrieval info: PRIVATE: OUTPUT_FREQ_MODE1 STRING "1"
 // Retrieval info: PRIVATE: OUTPUT_FREQ_MODE2 STRING "1"
@@ -307,17 +307,17 @@ endmodule
 // Retrieval info: CONSTANT: CLK0_DUTY_CYCLE NUMERIC "50"
 // Retrieval info: CONSTANT: CLK0_MULTIPLY_BY NUMERIC "715909"
 // Retrieval info: CONSTANT: CLK0_PHASE_SHIFT STRING "0"
-// Retrieval info: CONSTANT: CLK1_DIVIDE_BY NUMERIC "1875"
+// Retrieval info: CONSTANT: CLK1_DIVIDE_BY NUMERIC "900000"
 // Retrieval info: CONSTANT: CLK1_DUTY_CYCLE NUMERIC "50"
-// Retrieval info: CONSTANT: CLK1_MULTIPLY_BY NUMERIC "2048"
+// Retrieval info: CONSTANT: CLK1_MULTIPLY_BY NUMERIC "715909"
 // Retrieval info: CONSTANT: CLK1_PHASE_SHIFT STRING "0"
-// Retrieval info: CONSTANT: CLK2_DIVIDE_BY NUMERIC "1875"
+// Retrieval info: CONSTANT: CLK2_DIVIDE_BY NUMERIC "4500000"
 // Retrieval info: CONSTANT: CLK2_DUTY_CYCLE NUMERIC "50"
-// Retrieval info: CONSTANT: CLK2_MULTIPLY_BY NUMERIC "256"
+// Retrieval info: CONSTANT: CLK2_MULTIPLY_BY NUMERIC "447443"
 // Retrieval info: CONSTANT: CLK2_PHASE_SHIFT STRING "0"
-// Retrieval info: CONSTANT: CLK3_DIVIDE_BY NUMERIC "1875"
+// Retrieval info: CONSTANT: CLK3_DIVIDE_BY NUMERIC "9000000"
 // Retrieval info: CONSTANT: CLK3_DUTY_CYCLE NUMERIC "50"
-// Retrieval info: CONSTANT: CLK3_MULTIPLY_BY NUMERIC "128"
+// Retrieval info: CONSTANT: CLK3_MULTIPLY_BY NUMERIC "447443"
 // Retrieval info: CONSTANT: CLK3_PHASE_SHIFT STRING "0"
 // Retrieval info: CONSTANT: COMPENSATE_CLOCK STRING "CLK0"
 // Retrieval info: CONSTANT: INCLK0_INPUT_FREQUENCY NUMERIC "37037"
