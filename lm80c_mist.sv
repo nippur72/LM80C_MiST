@@ -289,7 +289,8 @@ t80pa cpu
 /***************************************** @address decoder********************************/
 /******************************************************************************************/
 /******************************************************************************************/
- 
+
+/* 
 wire PIO_SEL = (A[7:4] == 'b0000) & (MREQ & ~IORQ);
 wire CTC_SEL = (A[7:4] == 'b0001) & (MREQ & ~IORQ);
 wire SIO_SEL = (A[7:4] == 'b0010) & (MREQ & ~IORQ);
@@ -318,6 +319,51 @@ wire [7:0] cpu_din = (
 
 wire RAM_SEL =  A[15] & ~MREQ;
 wire ROM_SEL = ~A[15] & ~MREQ;
+*/
+
+reg PIO_SEL;
+reg CTC_SEL;
+reg SIO_SEL;
+reg VDP_SEL;
+reg PSG_SEL;
+reg LED_SEL;
+reg CSR;
+reg CSW;
+reg BDIR;
+reg BC;
+
+reg [7:0] cpu_din;
+
+reg RAM_SEL;
+reg ROM_SEL;
+
+always @(posedge ram_clock) begin
+	PIO_SEL <= (A[7:4] == 'b0000) & (MREQ & ~IORQ);
+	CTC_SEL <= (A[7:4] == 'b0001) & (MREQ & ~IORQ);
+	SIO_SEL <= (A[7:4] == 'b0010) & (MREQ & ~IORQ);
+	VDP_SEL <= (A[7:4] == 'b0011) & (MREQ & ~IORQ);
+	PSG_SEL <= (A[7:4] == 'b0100) & (MREQ & ~IORQ);
+
+	// debug LED on port 0x70 (112 decimal)
+	LED_SEL <= (A[7:4] == 'b0111) & (MREQ & ~IORQ);
+	 
+	CSR <= RD | (IORQ | VDP_SEL);
+	CSW <= WR | (IORQ | VDP_SEL);
+
+	BDIR = ~(WR | PSG_SEL);
+	BC   = ~(A[0] | PSG_SEL);
+
+	cpu_din <= (
+		PIO_SEL ? 0        :
+		CTC_SEL ? ctc_dout :
+		SIO_SEL ? 0        :
+		VDP_SEL ? vdp_dout :
+		PSG_SEL ? psg_dout : sdram_dout	
+	);
+
+	RAM_SEL <=  A[15] & ~MREQ;
+	ROM_SEL <= ~A[15] & ~MREQ;
+end
 
 /******************************************************************************************/
 /******************************************************************************************/
