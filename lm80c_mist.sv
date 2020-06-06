@@ -383,13 +383,9 @@ wire [0:7] vdp_r_;
 wire [0:7] vdp_g_;
 wire [0:7] vdp_b_;
 
-wire [0:5] vdp_r__ = vdp_r_[2:5];		
-wire [0:5] vdp_g__ = vdp_g_[2:5];
-wire [0:5] vdp_b__ = vdp_b_[2:5];
-
-wire [5:0] vdp_r = vdp_r__;
-wire [5:0] vdp_g = vdp_g__;
-wire [5:0] vdp_b = vdp_b__;
+wire [5:0] vdp_r = vdp_g_[2:7];
+wire [5:0] vdp_g = vdp_g_[2:7];
+wire [5:0] vdp_b = vdp_g_[2:7];
 
 wire vram_ce;
 wire vram_oe;
