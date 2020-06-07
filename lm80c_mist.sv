@@ -141,8 +141,8 @@ user_io (
 
 	.status     ( status     ),
 	
-	.clk_sys    ( CLOCK ),
-	.clk_sd     ( CLOCK ),       // sd card clock
+	.clk_sys    ( ram_clock ),
+	.clk_sd     ( ram_clock ),       // sd card clock
 	 
 	// ps2 interface
 	.ps2_kbd_clk    ( ps2_kbd_clk    ),
@@ -420,7 +420,7 @@ vdp
    .csr_n_i       ( CSR         ),
    .csw_n_i       ( CSW         ),
 	
-   .mode_i        ( A[1] ),
+   .mode_i        ( A[1]        ),
 		
    .int_n_o       ( VDP_INT     ),
 	
