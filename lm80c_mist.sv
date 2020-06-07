@@ -226,6 +226,7 @@ downloader downloader (
 /******************************************************************************************/
 /******************************************************************************************/
 
+/*
 wire eraser_busy;
 wire eraser_wr;
 wire [24:0] eraser_addr;
@@ -240,6 +241,7 @@ eraser eraser(
 	.addr     ( eraser_addr ),
 	.data     ( eraser_data )
 );
+*/
 
 
 	
@@ -576,12 +578,14 @@ always @(*) begin
 		sdram_wr     = download_wr;
 		sdram_rd     = 1'b1;
 	end	
+	/*
 	else if(eraser_busy) begin		
 		sdram_din    = eraser_data;
 		sdram_addr   = eraser_addr;
 		sdram_wr     = eraser_wr;
 		sdram_rd     = 1'b1;		
 	end	
+	*/
 	else if(debugger_busy) begin		
 		sdram_din     = debug_data_wr;		
 		sdram_addr    = debug_addr;
