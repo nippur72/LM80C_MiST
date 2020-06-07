@@ -444,7 +444,7 @@ vdp
 vram vram
 (
   .address( vram_a     ),
-  .clock  ( vram_clock ),
+  .clock  ( ram_clock  ),
   .data   ( vram_din   ),                       
   .wren   ( vram_we    ),                       
   .q      ( vram_dout  )
