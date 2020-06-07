@@ -528,13 +528,21 @@ wire ram_clock;
 wire CLOCK;
 wire CLK2;
 
+reg [2:0] cnt;
+
+always @(posedge ram_clock) begin
+	cnt <= cnt + 1;
+end
+
+wire vdp_ena = cnt == 0 || cnt == 2 || cnt==4 || cnt == 6;
+
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     // PLL is running stable
-	 .c0     ( vdp_clock   ),     // 10.738635 MHz
-	 .c1     ( ram_clock   ),     // CLOCK * 8
-	 .c2     ( CLOCK       ),     // 3.686400 MHz
-	 .c3     ( CLK2        )      // CLOCK / 2 for the PSG
+	 .c0     ( ram_clock   ),     // 
+	 .c1     ( vdp_clock   ),     // 
+	 .c2     ( CLOCK       ),     // 
+	 .c3     ( CLK2        )      // 
 );
 
 
