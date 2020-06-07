@@ -74,8 +74,14 @@ wire [5:0] osd_r;
 wire [5:0] osd_g;
 wire [5:0] osd_b;
 
-osd osd (
-   .clk_sys    ( vdp_clock  ),	
+osd 
+#
+(
+	.OSD_AUTO_CE(0)
+)
+osd (
+   .clk_sys    ( ram_clock  ),	
+	.ce         ( vdp_ena    ),
 
    // spi for OSD
    .SPI_DI     ( SPI_DI     ),
@@ -123,7 +129,7 @@ wire st_reset    = status[3];
 user_io #
 (
 	.STRLEN(conf_str_len),
-	.PS2DIV(24)              // ps2 clock divider: CLOCK / 24 must be approx = 15 Khz
+	.PS2DIV(14)              // ps2 clock divider: CLOCK / 24 must be approx = 15 Khz
 )
 user_io ( 
 	.conf_str   ( conf_str   ),
@@ -167,7 +173,7 @@ wire       reset_key;
 keyboard keyboard 
 (
 	.reset    ( !pll_locked  ),
-	.clk      ( CLOCK        ),
+	.clk      ( ram_clock    ),
 
 	.ps2_clk  ( ps2_kbd_clk  ),
 	.ps2_data ( ps2_kbd_data ),
@@ -406,8 +412,8 @@ vdp18_core
 */
 vdp
 (
-	.clk_i         ( vdp_clock   ),
-	.clk_en_10m7_i ( 1           ),
+	.clk_i         ( ram_clock   ),
+	.clk_en_10m7_i ( vdp_ena     ),
 
 	.reset_n_i     ( RESET       ),
 	
@@ -437,11 +443,11 @@ vdp
 
 vram vram
 (
-  .address( vram_a    ),
-  .clock  ( vdp_clock ),
-  .data   ( vram_din  ),                       
-  .wren   ( vram_we   ),                       
-  .q      ( vram_dout )
+  .address( vram_a     ),
+  .clock  ( vram_clock ),
+  .data   ( vram_din   ),                       
+  .wren   ( vram_we    ),                       
+  .q      ( vram_dout  )
 );
 
 /******************************************************************************************/
@@ -535,6 +541,7 @@ always @(posedge ram_clock) begin
 end
 
 wire vdp_ena = cnt == 0 || cnt == 2 || cnt==4 || cnt == 6;
+wire z80_ena = cnt == 0 || cnt==4;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
@@ -653,13 +660,13 @@ wire dac_audio_out;
 // TODO audio 
 dac #(.C_bits(16)) dac_AUDIO_L
 (
-	.clk_i  ( CLOCK         ),
+	.clk_i  ( ram_clock     ),
    .res_n_i( pll_locked    ),	
 	.dac_i  ( dac_audio_in  ),
 	.dac_o  ( dac_audio_out )
 );
 
-always @(posedge CLOCK) begin
+always @(posedge ram_clock) begin
 	AUDIO_L <= dac_audio_out;
 	AUDIO_R <= dac_audio_out ^ cpu_din[0];
 end
@@ -690,7 +697,7 @@ reg debug;
 
 assign LED = ~debug;
 
-always @(posedge CLOCK) begin
+always @(posedge ram_clock) begin
 	if(!ready) begin
 		debugger_busy <= 0;	
 		debug_addr    <= 'hffff;
@@ -699,28 +706,29 @@ always @(posedge CLOCK) begin
 		debug         <= 0;
 	end
 	else begin
-		if(!debug_done) begin
-			debugger_busy <= 1;
-			debug_addr    <= debug_addr + 1;
-			debug_wr      <= 0;
-			
-			if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
-			if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
-			if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
-			if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
+		if(z80_ena) begin
+			if(!debug_done) begin
+				debugger_busy <= 1;
+				debug_addr    <= debug_addr + 1;
+				debug_wr      <= 0;
+				
+				if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
+				if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
+				if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
+				if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
 
-			if(debug_addr == 4) begin
-				debugger_busy <= 0;
-				debug_done <= 1;
+				if(debug_addr == 4) begin
+					debugger_busy <= 0;
+					debug_done <= 1;
+				end
+				
+				if(debug_counter == 4) debug <= 1;					
 			end
 			
-			if(debug_counter == 4) debug <= 1;					
+			if(LED_SEL) begin
+				if(cpu_dout[0] == 1) debug <= ~debug;
+			end
 		end
-		
-		if(LED_SEL) begin
-			if(cpu_dout[0] == 1) debug <= ~debug;
-		end
-
 	end
 end
 
