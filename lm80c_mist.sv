@@ -581,7 +581,17 @@ always @(*) begin
 	end	
 end
 
+sysram sysram 
+(
+  .address( sdram_addr[14:0] ),
+  .clock  ( ram_clock        ),
+  .data   ( sdram_din        ),                       
+  .wren   ( sdram_wr         ),                       
+  .q      ( sdram_dout       )
+);
 
+
+/*
 // sdram from zx spectrum core	
 sdram sdram (
 	// interface to the MT48LC16M16 chip
@@ -606,7 +616,7 @@ sdram sdram (
    .oe         	 ( sdram_rd                  ),	
    .dout           ( sdram_dout                )	
 );
-
+*/
 
 /******************************************************************************************/
 /******************************************************************************************/
