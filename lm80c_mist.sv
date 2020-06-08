@@ -366,7 +366,7 @@ always @(posedge ram_clock) begin
 
 	cpu_din <= (
 		PIO_SEL ? 0        :
-		CTC_SEL ? ctc_dout :
+		CTC_SEL ? 0 /*ctc_dout*/ :
 		SIO_SEL ? 0        :
 		VDP_SEL ? vdp_dout :
 		PSG_SEL ? psg_dout : sdram_dout	
@@ -506,6 +506,7 @@ YM2149 YM2149
 wire [7:0] ctc_dout;
 wire INT;
 
+/*
 z80ctc_top z80ctc_top
 (
 	.clock     ( CLOCK      ),
@@ -524,7 +525,7 @@ z80ctc_top z80ctc_top
 	// trigger 0-3 are not connected
 	// daisy chain not available in this Z80CTC implementation
 );
-
+*/
 
 
 /******************************************************************************************/
