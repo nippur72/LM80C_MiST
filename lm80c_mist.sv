@@ -213,7 +213,7 @@ downloader downloader (
    .ROM_done    ( boot_completed  ),	
 	         
    // external ram interface
-   .clk   ( CLOCK         ),
+   .clk   ( cnt[1]  ),
    .wr    ( download_wr   ),
    .addr  ( download_addr ),
    .data  ( download_data )
@@ -270,7 +270,10 @@ t80pa cpu
 (
 	.reset_n ( RESET         ),  
 	
-	.clk     ( CLOCK         ), 
+	.clk     ( ram_clock     ), 
+	
+	.CEN_p   ( ram_clock & z80_ena       ),
+	.CEN_n   ( ~ram_clock & z80_ena       ),
 
 	.a       ( A             ),   
 	.DO      ( cpu_dout      ),   
@@ -536,14 +539,14 @@ wire ram_clock;
 wire CLOCK;
 wire CLK2;
 
-reg [2:0] cnt;
+reg [2:0] cnt = 0;
 
 always @(posedge ram_clock) begin
 	cnt <= cnt + 1;
 end
 
 wire vdp_ena = cnt == 0 || cnt == 2 || cnt==4 || cnt == 6;
-wire z80_ena = cnt == 0 || cnt==4;
+wire z80_ena = cnt == 0 || cnt == 4;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
@@ -571,7 +574,7 @@ wire        sdram_rd     ;
 wire [7:0]  sdram_dout   ; 
 wire [7:0]  sdram_din    ; 
 
-always @(*) begin
+always @(posedge ram_clock) begin
 	if(is_downloading) begin
 		sdram_din    = download_data;
 		sdram_addr   = download_addr;
@@ -644,7 +647,7 @@ sdram sdram (
 /******************************************************************************************/
 
 // stops the cpu when booting, downloading or erasing
-wire cpu_ena = ~boot_completed | is_downloading | eraser_busy | debugger_busy;
+wire cpu_ena = ~boot_completed | is_downloading /*| eraser_busy*/ | debugger_busy;
 
 // reset while booting or when the physical reset key is pressed
 // RESET is low active and goes into: t80a, vdp, psg, ctc
