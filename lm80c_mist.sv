@@ -258,40 +258,47 @@ eraser eraser(
 // CPU control signals
 wire [15:0] A;
 wire [7:0]  cpu_dout;
-wire WR;
-wire RD;
-wire IORQ;
-wire MREQ;
-wire M1;
+
+wire WR_n;
+wire RD_n;
+wire IORQ_n;
+wire MREQ_n;
+wire M1_n;
+
+wire WR   = ~WR_n;
+wire RD   = ~RD_n;
+wire IORQ = ~IORQ_n;
+wire MREQ = ~MREQ_n;
+wire M1   = ~M1_n;
 
 // t80cpu was taken from https://github.com/sorgelig/Amstrad_MiST by sorgelig
 
 t80pa cpu
 (
-	.reset_n ( RESET         ),  
+	.reset_n ( ~RESET        ),  
 	
 	.clk     ( ram_clock     ), 
 	
 	.CEN_p   ( ram_clock & z80_ena       ),
-	.CEN_n   ( ~ram_clock & z80_ena       ),
+	.CEN_n   ( ~ram_clock & z80_ena      ),
 
 	.a       ( A             ),   
 	.DO      ( cpu_dout      ),   
 	.di      ( cpu_din       ),   
 	
-	.rd_n    ( RD            ),   
-	.wr_n    ( WR            ),   
+	.rd_n    ( RD_n          ),   
+	.wr_n    ( WR_n          ),   
 	
-	.iorq_n  ( IORQ          ),   
-	.mreq_n  ( MREQ          ),   
+	.iorq_n  ( IORQ_n        ),   
+	.mreq_n  ( MREQ_n        ),   
 
-	.int_n   ( INT           ),   
-	.nmi_n   ( VDP_INT       ),   
+	.int_n   ( 1 /*INT    */ ),   
+	.nmi_n   ( 1 /*VDP_INT*/ ),   
 
-	.m1_n    ( M1            ),   
+	.m1_n    ( M1_n          ),   
 	.rfsh_n  ( 0             ),   
 	.busrq_n ( 1             ),   
-	.wait_n  ( ~cpu_ena      )    
+	.wait_n  ( ~WAIT         )    
 );
 
 
@@ -300,37 +307,6 @@ t80pa cpu
 /***************************************** @address decoder********************************/
 /******************************************************************************************/
 /******************************************************************************************/
-
-/* 
-wire PIO_SEL = (A[7:4] == 'b0000) & (MREQ & ~IORQ);
-wire CTC_SEL = (A[7:4] == 'b0001) & (MREQ & ~IORQ);
-wire SIO_SEL = (A[7:4] == 'b0010) & (MREQ & ~IORQ);
-wire VDP_SEL = (A[7:4] == 'b0011) & (MREQ & ~IORQ);
-wire PSG_SEL = (A[7:4] == 'b0100) & (MREQ & ~IORQ);
-
-// debug LED on port 0x70 (112 decimal)
-wire LED_SEL = (A[7:4] == 'b0111) & (MREQ & ~IORQ);
-
-
-wire U20A = IORQ | VDP_SEL;
- 
-wire CSR = RD | U20A;
-wire CSW = WR | U20A;
-
-wire BDIR = ~(WR | PSG_SEL);
-wire BC   = ~(A[0] | PSG_SEL);
-
-wire [7:0] cpu_din = (
-	PIO_SEL ? 0        :
-	CTC_SEL ? ctc_dout :
-	SIO_SEL ? 0        :
-	VDP_SEL ? vdp_dout :
-	PSG_SEL ? psg_dout : sdram_dout	
-);
-
-wire RAM_SEL =  A[15] & ~MREQ;
-wire ROM_SEL = ~A[15] & ~MREQ;
-*/
 
 reg PIO_SEL;
 reg CTC_SEL;
@@ -342,38 +318,44 @@ reg CSR;
 reg CSW;
 reg BDIR;
 reg BC;
-
-reg [7:0] cpu_din;
-
 reg RAM_SEL;
 reg ROM_SEL;
 
+reg [7:0] cpu_din;
+
+
 always @(posedge ram_clock) begin
-	PIO_SEL <= (A[7:4] == 'b0000) & (MREQ & ~IORQ);
-	CTC_SEL <= (A[7:4] == 'b0001) & (MREQ & ~IORQ);
-	SIO_SEL <= (A[7:4] == 'b0010) & (MREQ & ~IORQ);
-	VDP_SEL <= (A[7:4] == 'b0011) & (MREQ & ~IORQ);
-	PSG_SEL <= (A[7:4] == 'b0100) & (MREQ & ~IORQ);
 
-	// debug LED on port 0x70 (112 decimal)
-	LED_SEL <= (A[7:4] == 'b0111) & (MREQ & ~IORQ);
+	PIO_SEL <= (A[7:4] == 'b0000) & IORQ & ~MREQ;
+	CTC_SEL <= (A[7:4] == 'b0001) & IORQ & ~MREQ;
+	SIO_SEL <= (A[7:4] == 'b0010) & IORQ & ~MREQ;
+	VDP_SEL <= (A[7:4] == 'b0011) & IORQ & ~MREQ;
+	PSG_SEL <= (A[7:4] == 'b0100) & IORQ & ~MREQ;
+
+	// debug LED on port 255
+	LED_SEL <= (A[7:0] == 255) & IORQ & ~MREQ;
 	 
-	CSR <= RD | (IORQ | VDP_SEL);
-	CSW <= WR | (IORQ | VDP_SEL);
+	CSR <= RD_n | (IORQ_n | ~VDP_SEL);
+	CSW <= WR_n | (IORQ_n | ~VDP_SEL);
 
-	BDIR = ~(WR | PSG_SEL);
-	BC   = ~(A[0] | PSG_SEL);
+	BDIR = ~(~WR | ~PSG_SEL);
+	BC   = ~(A[0] | ~PSG_SEL);
 
-	cpu_din <= (
-		PIO_SEL ? 0        :
-		CTC_SEL ? 0 /*ctc_dout*/ :
-		SIO_SEL ? 0        :
-		VDP_SEL ? vdp_dout :
-		PSG_SEL ? psg_dout : sdram_dout	
-	);
+	//RAM_SEL <=  A[15] & MREQ;
+	RAM_SEL <= MREQ && (A > 32767 && A < 49152);
+	ROM_SEL <= MREQ & A[15]==0;
 
-	RAM_SEL <=  A[15] & ~MREQ;
-	ROM_SEL <= ~A[15] & ~MREQ;
+	if(RD) begin
+		cpu_din <= (
+			PIO_SEL ? 0         :
+			CTC_SEL ? ctc_dout  :
+			SIO_SEL ? 0         :
+			VDP_SEL ? vdp_dout  :
+			PSG_SEL ? psg_dout  :
+		   LED_SEL ? LED_latch : sdram_dout	
+		);
+	end
+
 end
 
 /******************************************************************************************/
@@ -420,7 +402,7 @@ vdp
 	.clk_i         ( ram_clock   ),
 	.clk_en_10m7_i ( vdp_ena     ),
 
-	.reset_n_i     ( RESET       ),
+	.reset_n_i     ( ~RESET      ),
 	
    .csr_n_i       ( CSR         ),
    .csw_n_i       ( CSW         ),
@@ -477,7 +459,7 @@ YM2149 YM2149
 (
 	.CLK   ( CLK2        ),
 	.CE    ( 1           ),
-	.RESET ( ~RESET      ),
+	.RESET ( RESET       ),
 	.BDIR  ( BDIR        ),
 	.BC    ( BC          ),
 	
@@ -511,15 +493,15 @@ z80ctc_top z80ctc_top
 (
 	.clock     ( CLOCK      ),
 	.clock_ena ( 1          ),
-	.reset     ( ~RESET     ),
+	.reset     ( RESET      ),
 	.din       ( cpu_dout   ),
 	.dout      ( ctc_dout   ),
 	.cpu_din   ( cpu_din    ),
 	.ce_n      ( CTC_SEL    ),
 	.cs        ( A[1:0]     ),
-	.m1_n      ( M1         ),
-	.iorq_n    ( IORQ       ),
-	.rd_n      ( RD         ),
+	.m1_n      ( ~M1        ),
+	.iorq_n    ( ~IORQ      ),
+	.rd_n      ( ~RD        ),
    .int_n     ( INT        )
 	
 	// trigger 0-3 are not connected
@@ -599,14 +581,14 @@ always @(posedge ram_clock) begin
 	else begin
 		sdram_din    = cpu_dout;
 		sdram_addr   = A;
-		sdram_wr     = ~WR & ~MREQ & RAM_SEL;
-		sdram_rd     = ~RD & ~MREQ;
+		sdram_wr     = WR & MREQ & RAM_SEL;
+		sdram_rd     = RD & MREQ;
 	end	
 end
 
 sysram sysram 
 (
-  .address( sdram_addr[14:0] ),
+  .address( sdram_addr[15:0] ),
   .clock  ( ram_clock        ),
   .data   ( sdram_din        ),                       
   .wren   ( sdram_wr         ),                       
@@ -648,11 +630,11 @@ sdram sdram (
 /******************************************************************************************/
 
 // stops the cpu when booting, downloading or erasing
-wire cpu_ena = ~boot_completed | is_downloading /*| eraser_busy*/ | debugger_busy;
+wire WAIT = ~boot_completed | is_downloading /*| eraser_busy*/ | debugger_busy;
 
 // reset while booting or when the physical reset key is pressed
-// RESET is low active and goes into: t80a, vdp, psg, ctc
-wire RESET = ~(~boot_completed | reset_key); 
+// RESET goes into: t80a, vdp, psg, ctc
+wire RESET = ~boot_completed | reset_key; 
 
 
 /******************************************************************************************/
@@ -676,7 +658,7 @@ dac #(.C_bits(16)) dac_AUDIO_L
 
 always @(posedge ram_clock) begin
 	AUDIO_L <= dac_audio_out;
-	AUDIO_R <= dac_audio_out ^ cpu_din[0];
+	AUDIO_R <= dac_audio_out;
 end
 
 
@@ -699,14 +681,14 @@ reg        debug_wr;
 reg  [7:0] debug_counter;
 reg  [7:0] debug_ok;
 
-wire ready = RESET;  // negated logic
-
 reg debug;
 
 assign LED = ~debug;
 
+/*
+// debugs that ROM is loaded correctly (first 4 bytes checked)
 always @(posedge ram_clock) begin
-	if(!ready) begin
+	if(!RESET) begin
 		debugger_busy <= 0;	
 		debug_addr    <= 'hffff;
 		debug_counter <= 0;
@@ -733,13 +715,26 @@ always @(posedge ram_clock) begin
 				if(debug_counter == 4) debug <= 1;					
 			end
 			
-			if(LED_SEL) begin
-				if(cpu_dout[0] == 1) debug <= ~debug;
-			end
 		end
 	end
 end
+*/
 
+// simulate a fictional LED peripheral
+reg [7:0] LED_latch;
+
+always @(posedge ram_clock) begin
+	if(RESET) begin
+		LED_latch <= 0;
+	end
+	else begin
+		debug <= (LED_latch != 0);
+		
+		if(LED_SEL) begin
+			LED_latch <= cpu_dout;			
+		end
+	end
+end
 
 endmodule
 
