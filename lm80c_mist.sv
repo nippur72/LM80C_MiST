@@ -292,7 +292,7 @@ t80pa cpu
 	.iorq_n  ( IORQ_n        ),   
 	.mreq_n  ( MREQ_n        ),   
 
-	.int_n   ( INT           ),   
+	.int_n   ( INT_n         ),   
 	.nmi_n   ( 1 /*VDP_INT*/ ),   
 
 	.m1_n    ( M1_n          ),   
@@ -486,22 +486,22 @@ YM2149 YM2149
 /******************************************************************************************/
 
 wire [7:0] ctc_dout;
-wire INT;
+wire INT_n;
 
 z80ctc_top z80ctc_top
 (
-	.clock     ( CLOCK      ),
-	.clock_ena ( 1          ),
+	.clock     ( ram_clock  ),
+	.clock_ena ( z80_ena    ),
 	.reset     ( RESET      ),
 	.din       ( cpu_dout   ),
 	.dout      ( ctc_dout   ),
 	.cpu_din   ( cpu_din    ),
-	.ce_n      ( CTC_SEL    ),
+	.ce_n      ( ~CTC_SEL   ),
 	.cs        ( A[1:0]     ),
-	.m1_n      ( ~M1        ),
-	.iorq_n    ( ~IORQ      ),
-	.rd_n      ( ~RD        ),
-   .int_n     ( INT        )
+	.m1_n      ( M1_n       ),
+	.iorq_n    ( IORQ_n     ),
+	.rd_n      ( RD_n       ),
+   .int_n     ( INT_n      )
 	
 	// trigger 0-3 are not connected
 	// daisy chain not available in this Z80CTC implementation
