@@ -353,7 +353,10 @@ always @(posedge ram_clock) begin
 			VDP_SEL ? vdp_dout  :
 			PSG_SEL ? psg_dout  :
 		   LED_SEL ? LED_latch : sdram_dout	
-		);
+		);		
+	end
+	else if(IORQ && M1) begin
+		cpu_din <= ctc_dout;
 	end
 
 end
@@ -721,18 +724,29 @@ end
 // simulate a fictional LED peripheral
 reg [7:0] LED_latch;
 
+reg [7:0] state;
+
 always @(posedge ram_clock) begin
 	if(RESET) begin
 		LED_latch <= 0;
+		state <= 0;
 	end
 	else begin
 		debug <= (LED_latch != 0);
 		
-		if(LED_SEL) begin
+		if(state == 0 && INT_n == 1)            state <= 1;
+		if(state == 1 && INT_n == 0)            state <= 2;
+		if(state == 2 && z80_ena && IORQ && M1) state <= 3;
+		if(state == 3 && z80_ena && IORQ && M1 && ctc_dout == 'h46) state <= 4;
+		
+		LED_latch <= (state == 4);		
+		
+		if(LED_SEL && WR) begin
 			LED_latch <= cpu_dout;			
 		end
 	end
 end
+
 
 endmodule
 
