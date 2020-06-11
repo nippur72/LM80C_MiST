@@ -284,8 +284,8 @@ t80pa cpu
 	
 	.clk     ( ram_clock     ), 
 	
-	.CEN_p   ( ram_clock & z80_ena       ),
-	.CEN_n   ( ~ram_clock & z80_ena      ),
+	.CEN_p   ( z80_ena       ),
+	//.CEN_n   ( ~ram_clock & z80_ena      ),
 
 	.a       ( A             ),   
 	.DO      ( cpu_dout      ),   
@@ -297,7 +297,7 @@ t80pa cpu
 	.iorq_n  ( IORQ_n        ),   
 	.mreq_n  ( MREQ_n        ),   
 
-	.int_n   ( INT_n /*| (long_counter < 100000000)*/ ),   
+	.int_n   ( INT_n | (long_counter < 100000000) ),   
 	.nmi_n   ( 1 /*VDP_INT*/ ),   
 
 	.m1_n    ( M1_n          ),   
@@ -531,13 +531,17 @@ wire CLOCK;
 wire CLK2;
 
 reg [2:0] cnt = 0;
+reg [2:0] cnt1 = 0;
 
 always @(posedge ram_clock) begin
 	cnt <= cnt + 1;
+	cnt1 <= cnt1 + 1;
+	if(cnt == 5) cnt <= 0;
 end
 
-wire vdp_ena = cnt == 0 || cnt == 2 || cnt==4 || cnt == 6;
-wire z80_ena = cnt == 0 || cnt == 4;
+wire vdp_ena = cnt1 == 0 || cnt1 == 2 || cnt1==4 || cnt1 == 6;
+
+wire z80_ena = cnt == 0;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
