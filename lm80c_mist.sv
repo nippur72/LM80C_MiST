@@ -461,8 +461,8 @@ wire [7:0] psg_IOB_in;
 
 YM2149 YM2149
 (
-	.CLK   ( CLK2        ),
-	.CE    ( 1           ),
+	.CLK   ( ram_clock   ),
+	.CE    ( z80_ena     ),
 	.RESET ( RESET       ),
 	.BDIR  ( BDIR        ),
 	.BC    ( BC          ),
