@@ -171,6 +171,9 @@ wire       reset_key;
 
 wire debug1;
 
+assign psg_IOA_out = 255;
+assign psg_IOB_in  = 255;
+
 keyboard keyboard 
 (
 	.reset    ( !pll_locked  ),
@@ -179,8 +182,8 @@ keyboard keyboard
 	.ps2_clk  ( ps2_kbd_clk  ),
 	.ps2_data ( ps2_kbd_data ),
 	
-	.port_A   ( psg_IOA_out  ),
-	.port_B   ( psg_IOB_in   ),
+	.column_bits ( psg_IOA_in  ),
+	.row_select  ( psg_IOB_out ),
 	
 	.reset_key( reset_key    ),
 	.debug1   ( debug1       )
@@ -294,7 +297,7 @@ t80pa cpu
 	.iorq_n  ( IORQ_n        ),   
 	.mreq_n  ( MREQ_n        ),   
 
-	.int_n   ( INT_n         ),   
+	.int_n   ( INT_n /*| (long_counter < 100000000)*/ ),   
 	.nmi_n   ( 1 /*VDP_INT*/ ),   
 
 	.m1_n    ( M1_n          ),   
@@ -454,10 +457,11 @@ wire [7:0] CHANNEL_C; // PSG Output channel C
 
 wire [7:0] psg_dout;
 
-//reg  [7:0] psg_IOA_in;
+wire [7:0] psg_IOA_in;
 wire [7:0] psg_IOA_out;
+
 wire [7:0] psg_IOB_in;
-//wire [7:0] psg_IOB_out;
+wire [7:0] psg_IOB_out;
 
 YM2149 YM2149
 (
@@ -476,11 +480,12 @@ YM2149 YM2149
 
 	.SEL( 1 ),
 	
-	.IOA_in  ( psg_IOB_in /*psg_IOA_in*/ ),
-	//.IOA_out ( psg_IOB_out ),
 	
-	//.IOB_in  (  ),
-	.IOB_out ( psg_IOA_out)
+	.IOA_in  ( psg_IOA_in  ),
+	.IOA_out ( psg_IOA_out ),	
+	.IOB_in  ( psg_IOB_in  ),
+	.IOB_out ( psg_IOB_out )	
+	
 );
 
 
@@ -639,6 +644,15 @@ wire WAIT = ~boot_completed | is_downloading /*| eraser_busy*/ | debugger_busy;
 // RESET goes into: t80a, vdp, psg, ctc
 wire RESET = ~boot_completed | reset_key; 
 
+reg [63:0] long_counter;
+always @(posedge ram_clock) begin
+	if(RESET) begin
+		long_counter <= 0;
+	end
+	else begin
+		long_counter <= long_counter + 1;
+	end		
+end
 
 /******************************************************************************************/
 /******************************************************************************************/

@@ -8,8 +8,8 @@ module keyboard (
 	input ps2_data,
 	
 	// AY-3-8910 chip interface
-   input  [ 7:0] port_A,   
-	output [ 7:0] port_B,   	
+   input  [ 7:0] row_select,   
+	output [ 7:0] column_bits,   	
 	
 	output reset_key,
 	
@@ -23,8 +23,8 @@ module keyboard (
 
 reg resetkey;
 
-wire [7:0] KA = port_A;
-assign port_B = KD;				
+wire [7:0] KA = row_select;
+assign column_bits = KD;				
 assign reset_key = resetkey;
 
 reg debugflag = 0;
@@ -44,9 +44,6 @@ wire [7:0] KD = ((KA[ 0] == 0) ? KM[ 0] : 8'b11111111) &
 
 // keyboard matrix 8x8
 reg [7:0] KM [7:0]; 
-
-
-
 
 wire [7:0] kdata;  // keyboard data byte, 0xE0 = extended key, 0xF0 release key
 wire valid;        // 1 = data byte contains valid keyboard data 
