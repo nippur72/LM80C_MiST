@@ -103,7 +103,7 @@ osd (
 assign VGA_R = osd_r;
 assign VGA_G = osd_g;
 assign VGA_B = osd_b;
-assign VGA_HS = vdp_hs & vdp_vs;
+assign VGA_HS = ~(vdp_hs ^ vdp_vs);
 assign VGA_VS = 1;
 
 
@@ -398,12 +398,11 @@ wire [0:7]  vram_dout;
 wire [7:0] vdp_dout;
 		
 vdp18_core
-/* 
+ 
 #(
-	.is_pal_g(0),     // NTSC
-	.compat_rgb_(0)
+	.is_pal_g(0)     // NTSC	
 ) 
-*/
+
 vdp
 (
 	.clk_i         ( ram_clock   ),
