@@ -166,9 +166,10 @@ wire   [31:0] img_size;    // size of image in bytes
 wire ps2_kbd_clk;
 wire ps2_kbd_data;
 
-reg  [7:0] port_A;
 wire [7:0] port_B;
 wire       reset_key;
+
+wire debug1;
 
 keyboard keyboard 
 (
@@ -178,10 +179,11 @@ keyboard keyboard
 	.ps2_clk  ( ps2_kbd_clk  ),
 	.ps2_data ( ps2_kbd_data ),
 	
-	.port_A   ( port_A    ),
-	.port_B   ( port_B    ),
+	.port_A   ( psg_IOA_out  ),
+	.port_B   ( psg_IOB_in   ),
 	
-	.reset_key( reset_key )	
+	.reset_key( reset_key    ),
+	.debug1   ( debug1       )
 );
 
 		
@@ -452,11 +454,10 @@ wire [7:0] CHANNEL_C; // PSG Output channel C
 
 wire [7:0] psg_dout;
 
-reg  [7:0] IOA_in;
-reg  [7:0] IOB_in;
-
-wire [7:0] IOA_out;
-wire [7:0] IOB_out;
+//reg  [7:0] psg_IOA_in;
+wire [7:0] psg_IOA_out;
+wire [7:0] psg_IOB_in;
+//wire [7:0] psg_IOB_out;
 
 YM2149 YM2149
 (
@@ -475,10 +476,11 @@ YM2149 YM2149
 
 	.SEL( 1 ),
 	
-	.IOA_in  ( IOA_in ),
-	.IOA_out ( IOA_out),
-	.IOB_in  ( IOB_in ),
-	.IOB_out ( IOB_out)
+	.IOA_in  ( psg_IOB_in /*psg_IOA_in*/ ),
+	//.IOA_out ( psg_IOB_out ),
+	
+	//.IOB_in  (  ),
+	.IOB_out ( psg_IOA_out)
 );
 
 
@@ -732,7 +734,8 @@ always @(posedge ram_clock) begin
 		state <= 0;
 	end
 	else begin
-		debug <= (LED_latch != 0);
+		//debug <= (LED_latch != 0);
+		debug <= debug1;
 		
 		if(state == 0 && INT_n == 1)            state <= 1;
 		if(state == 1 && INT_n == 0)            state <= 2;
