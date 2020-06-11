@@ -284,8 +284,7 @@ t80pa cpu
 	
 	.clk     ( ram_clock     ), 
 	
-	.CEN_p   ( z80_ena       ),
-	//.CEN_n   ( ~ram_clock & z80_ena      ),
+	.CEN_p   ( z80_ena       ),	
 
 	.a       ( A             ),   
 	.DO      ( cpu_dout      ),   
@@ -297,7 +296,7 @@ t80pa cpu
 	.iorq_n  ( IORQ_n        ),   
 	.mreq_n  ( MREQ_n        ),   
 
-	.int_n   ( INT_n | (long_counter < 100000000) ),   
+	.int_n   ( INT_n /*| (long_counter < 100000000)*/ ),   
 	.nmi_n   ( 1 /*VDP_INT*/ ),   
 
 	.m1_n    ( M1_n          ),   
@@ -478,8 +477,7 @@ YM2149 YM2149
 	.DI( cpu_dout ),
 	.DO( psg_dout ),
 
-	.SEL( 1 ),
-	
+	.SEL( 1 ),                   // 1=divide clock by 2, make it compatible with AY-3-8910
 	
 	.IOA_in  ( psg_IOA_in  ),
 	.IOA_out ( psg_IOA_out ),	
