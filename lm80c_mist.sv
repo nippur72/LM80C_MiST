@@ -398,7 +398,7 @@ wire [0:7]  vram_dout;
 wire [7:0] vdp_dout;
 		
 vdp18_core
- 
+  
 #(
 	.is_pal_g(0)     // NTSC	
 ) 
