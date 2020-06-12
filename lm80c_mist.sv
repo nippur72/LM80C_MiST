@@ -94,21 +94,22 @@ osd (
    .SPI_SCK    ( SPI_SCK    ),
    .SPI_SS3    ( SPI_SS3    ),
 
+	/*
    .R_in       ( test_r      ),
    .G_in       ( test_g      ),
    .B_in       ( test_b      ),
 	
    .HSync      ( test_hs    ),
    .VSync      ( test_vs    ),
-
-	/*
+	*/
+	
    .R_in       ( vdp_r      ),
    .G_in       ( vdp_g      ),
    .B_in       ( vdp_b      ),
 	
    .HSync      ( vdp_hs     ),
    .VSync      ( vdp_vs     ),
-	*/
+	
 	
    .R_out      ( osd_r      ),
    .G_out      ( osd_g      ),
@@ -118,8 +119,9 @@ osd (
 assign VGA_R = osd_r;
 assign VGA_G = osd_g;
 assign VGA_B = osd_b;
-assign VGA_HS = ~(~test_hs | ~test_vs);
+//assign VGA_HS = ~(~test_hs | ~test_vs);
 //assign VGA_HS = ~(vdp_hs ^ vdp_vs);
+assign VGA_HS = ~(~vdp_hs | ~vdp_vs);
 assign VGA_VS = 1;
 
 

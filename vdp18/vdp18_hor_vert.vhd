@@ -176,9 +176,9 @@ begin
 
         -- Vertical sync ------------------------------------------------------
         if is_pal_g = 1 then
-          if    cnt_vert_q = 244 then
+          if    cnt_vert_q = 244 and cnt_hor_q = -64 then
             vsync_n_o <= '0';
-          elsif cnt_vert_q = 247 then
+          elsif cnt_vert_q = 247 and cnt_hor_q = -64 then
             vsync_n_o <= '1';
           end if;
         else
