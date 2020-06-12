@@ -468,9 +468,9 @@ always @(posedge ram_clock) begin
 		vcnt <= 0;
 	end
 	else begin
-		if(vdp_ena) begin
+		if(vdp_5m) begin
 			hcnt <= hcnt + 1;
-			if(hcnt == 684) begin
+			if(hcnt == 342) begin
 				hcnt <= 0;
 				vcnt <= vcnt + 1;
 				if(vcnt == 262) vcnt <= 0;
@@ -479,16 +479,18 @@ always @(posedge ram_clock) begin
 	end	
 end
 
+parameter start = 80;
+
 wire test_vs = vcnt < 8  ? 0 : 1 ;
-wire test_hs = hcnt < 60 ? 0 : 1 ;
+wire test_hs = hcnt < 29 ? 0 : 1 ;
 
-wire [15:0] stripe = (hcnt - 100) / 32;
+wire [15:0] stripe = hcnt / 32;
 
-wire blank   = (vcnt < 8) || (hcnt < 100 || hcnt > 600);
+wire blank   = (vcnt < 8) || (hcnt < 60 || hcnt > 340);
 
-wire [5:0] test_r = blank ? 0 : { stripe[0] , 5'b0 } ;//hcnt[5:0];
-wire [5:0] test_g = blank ? 0 : { stripe[1] , 5'b0 } ;//hcnt[6:1];
-wire [5:0] test_b = blank ? 0 : { stripe[2] , 5'b0 } ;//hcnt[7:2];
+wire [5:0] test_r = blank ? 0 : (stripe[0] ? 6'b111111 : 0);
+wire [5:0] test_g = blank ? 0 : (stripe[1] ? 6'b111111 : 0);
+wire [5:0] test_b = blank ? 0 : (stripe[2] ? 6'b111111 : 0);
 
 
 /******************************************************************************************/
