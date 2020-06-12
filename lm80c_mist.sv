@@ -22,6 +22,8 @@
 // TODO italian keyboard
 // TODO add mist_video
 // TODO modify BASTXT and PRGEND vectors in downloader
+// TODO sio, pio dummy modules
+// TODO parametrize downloader, share with Laser500_MiST
 
 
 
@@ -466,7 +468,7 @@ reg [15:0] hcnt;
 reg [15:0] vcnt;
 always @(posedge ram_clock) begin
 	if(RESET) begin
-		hcnt <= -36; //-{ 8'b0, LED_latch };
+		hcnt <= -38; //-{ 8'b0, LED_latch };
 		vcnt <= 0;
 	end
 	else begin
@@ -490,7 +492,7 @@ wire [15:0] stripe = hcnt / 32;
 
 wire blank   = (vcnt < 8) || (hcnt < 60 || hcnt > 340);
 
-wire newdisp = LED_latch == 0;
+wire newdisp = LED_latch != 0;
 
 wire [5:0] test_r = newdisp ? (blank ? 0 : vdp_r) : vdp_r;
 wire [5:0] test_g = newdisp ? (blank ? 0 : vdp_g) : vdp_r;
@@ -806,13 +808,13 @@ end
 */
 
 // simulate a fictional LED peripheral
-reg [7:0] LED_latch;
+reg [7:0] LED_latch = 1;
 
 reg [7:0] state;
 
 always @(posedge ram_clock) begin
 	if(RESET) begin
-		LED_latch <= 0;
+		//LED_latch <= 0;
 		state <= 0;
 	end
 	else begin
