@@ -10,11 +10,17 @@
 // (FPGA pins are also uppercase)
 
 
-
-// TODO audio
-// TODO add scandoubler/scanlines
-// TODO YPbPr
-// TODO true/ita keyboard
+// TODO color problem
+// TODO async vdp
+// TODO sdram
+// TODO prg load
+// TODO ram injection
+// TODO osd reset
+// TODO improve TMS9918 add dot pixels
+// TODO stereo output
+// TODO exact clock
+// TODO italian keyboard
+// TODO add mist_video
 // TODO modify BASTXT and PRGEND vectors in downloader
 
 
@@ -88,12 +94,21 @@ osd (
    .SPI_SCK    ( SPI_SCK    ),
    .SPI_SS3    ( SPI_SS3    ),
 
+   .R_in       ( test_r      ),
+   .G_in       ( test_g      ),
+   .B_in       ( test_b      ),
+	
+   .HSync      ( test_hs    ),
+   .VSync      ( test_vs    ),
+
+	/*
    .R_in       ( vdp_r      ),
    .G_in       ( vdp_g      ),
    .B_in       ( vdp_b      ),
 	
    .HSync      ( vdp_hs     ),
    .VSync      ( vdp_vs     ),
+	*/
 	
    .R_out      ( osd_r      ),
    .G_out      ( osd_g      ),
@@ -103,7 +118,8 @@ osd (
 assign VGA_R = osd_r;
 assign VGA_G = osd_g;
 assign VGA_B = osd_b;
-assign VGA_HS = ~(vdp_hs ^ vdp_vs);
+assign VGA_HS = ~(~test_hs | ~test_vs);
+//assign VGA_HS = ~(vdp_hs ^ vdp_vs);
 assign VGA_VS = 1;
 
 
@@ -443,6 +459,38 @@ vram vram
   .q      ( vram_dout  )
 );
 
+// @test
+reg [15:0] hcnt;
+reg [15:0] vcnt;
+always @(posedge ram_clock) begin
+	if(RESET) begin
+		hcnt <= 0;
+		vcnt <= 0;
+	end
+	else begin
+		if(vdp_ena) begin
+			hcnt <= hcnt + 1;
+			if(hcnt == 684) begin
+				hcnt <= 0;
+				vcnt <= vcnt + 1;
+				if(vcnt == 262) vcnt <= 0;
+			end
+		end
+	end	
+end
+
+wire test_vs = vcnt < 8  ? 0 : 1 ;
+wire test_hs = hcnt < 60 ? 0 : 1 ;
+
+wire [15:0] stripe = (hcnt - 100) / 32;
+
+wire blank   = (vcnt < 8) || (hcnt < 100 || hcnt > 600);
+
+wire [5:0] test_r = blank ? 0 : { stripe[0] , 5'b0 } ;//hcnt[5:0];
+wire [5:0] test_g = blank ? 0 : { stripe[1] , 5'b0 } ;//hcnt[6:1];
+wire [5:0] test_b = blank ? 0 : { stripe[2] , 5'b0 } ;//hcnt[7:2];
+
+
 /******************************************************************************************/
 /******************************************************************************************/
 /***************************************** @psg *******************************************/
@@ -537,6 +585,7 @@ always @(posedge ram_clock) begin
 end
 
 wire vdp_ena = cnt1 == 0 || cnt1 == 2 || cnt1==4 || cnt1 == 6;
+wire vdp_5m  = cnt1 == 0 || cnt1==4;
 
 wire z80_ena = cnt == 0;
 
