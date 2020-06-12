@@ -56,12 +56,12 @@ reg [2:0] cnt = 0;
 wire  rom_download = dio_index == 0;
 wire  prg_download = dio_index == 8'h01 || dio_index == 8'h41;
 
-localparam ROM_START  = 25'h0;                 // 0x0000 start of Laser 500 ROM 
-localparam PTR_TEXT   = 25'h10000 + 25'h995;   // 0x8995 start of BASIC free RAM (aka TEXT)
-localparam PTR_VARTAB = 25'h10000 + 25'h3E9;   // 0x83E9 (aka VARTAB)
+localparam ROM_START  = 16'h0;     // start of ROM 
+localparam PTR_BASTXT = 16'h8133;  // BASTXT: start of BASIC free RAM
+localparam PTR_PROGND = 16'h81BB;  // PROGND: end of basic progran
 
-wire [24:0] PRG_END_ADDRESS = 25'h8995 + dio_addr;   // TODO substitute with file lenght
-wire [24:0] VARTAB_VALUE = PRG_END_ADDRESS + 1;      // VARTAB points to the byte after the BASIC program
+wire [24:0] PRG_END_ADDRESS = 25'h8133 + dio_addr;   // TODO substitute with file lenght
+wire [24:0] VARTAB_VALUE = PRG_END_ADDRESS + 1;      // points to the byte after the BASIC program
 
 always @(posedge clk) begin
 	
@@ -76,7 +76,7 @@ always @(posedge clk) begin
 		cnt         <= 0;
 		
 		     if(rom_download) addr <= ROM_START  + dio_addr;				
-		else if(prg_download) addr <= PTR_TEXT + dio_addr;
+		else if(prg_download) addr <= PTR_BASTXT + dio_addr;
 	end
 	else if(dio_dowloading == 0 && dio_dowloading_old == 1) begin
 		// main download done
@@ -88,7 +88,7 @@ always @(posedge clk) begin
 			// write low byte 
 			downloading <= 1;
 			wr          <= 1;
-			addr        <= PTR_VARTAB;
+			addr        <= PTR_PROGND;
 			data        <= VARTAB_VALUE[ 7:0];
 			cnt         <= 2;
 		end
@@ -96,7 +96,7 @@ always @(posedge clk) begin
 			// write hi byte
 			downloading <= 1;
 			wr          <= 1;
-			addr        <= PTR_VARTAB+1;
+			addr        <= PTR_PROGND+1;
 			data        <= VARTAB_VALUE[15:8];
 			cnt         <= 3;			
 		end
