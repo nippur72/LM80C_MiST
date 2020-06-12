@@ -56,9 +56,9 @@ reg [2:0] cnt = 0;
 wire  rom_download = dio_index == 0;
 wire  prg_download = dio_index == 8'h01 || dio_index == 8'h41;
 
-localparam ROM_START  = 16'h0;     // start of ROM 
-localparam PTR_BASTXT = 16'h8133;  // BASTXT: start of BASIC free RAM
-localparam PTR_PROGND = 16'h81BB;  // PROGND: end of basic progran
+localparam ROM_START  = 25'h0;     // start of ROM 
+localparam PTR_BASTXT = 25'h8133;  // BASTXT: start of BASIC free RAM
+localparam PTR_PROGND = 25'h81BB;  // PROGND: end of basic progran
 
 wire [24:0] PRG_END_ADDRESS = 25'h8133 + dio_addr;   // TODO substitute with file lenght
 wire [24:0] VARTAB_VALUE = PRG_END_ADDRESS + 1;      // points to the byte after the BASIC program
