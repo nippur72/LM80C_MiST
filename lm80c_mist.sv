@@ -94,22 +94,21 @@ osd (
    .SPI_SCK    ( SPI_SCK    ),
    .SPI_SS3    ( SPI_SS3    ),
 
-	/*
    .R_in       ( test_r      ),
    .G_in       ( test_g      ),
    .B_in       ( test_b      ),
 	
    .HSync      ( test_hs    ),
    .VSync      ( test_vs    ),
-	*/
-	
+
+/*	
    .R_in       ( vdp_r      ),
    .G_in       ( vdp_g      ),
    .B_in       ( vdp_b      ),
 	
    .HSync      ( vdp_hs     ),
    .VSync      ( vdp_vs     ),
-	
+*/	
 	
    .R_out      ( osd_r      ),
    .G_out      ( osd_g      ),
@@ -119,9 +118,9 @@ osd (
 assign VGA_R = osd_r;
 assign VGA_G = osd_g;
 assign VGA_B = osd_b;
-//assign VGA_HS = ~(~test_hs | ~test_vs);
+assign VGA_HS = ~(~test_hs | ~test_vs);
 //assign VGA_HS = ~(vdp_hs ^ vdp_vs);
-assign VGA_HS = ~(~vdp_hs | ~vdp_vs);
+//assign VGA_HS = ~(~vdp_hs | ~vdp_vs);
 assign VGA_VS = 1;
 
 
@@ -394,6 +393,7 @@ end
 
 wire VDP_INT;
 
+
 wire vdp_hs;
 wire vdp_vs;
 
@@ -401,9 +401,9 @@ wire [0:7] vdp_r_;
 wire [0:7] vdp_g_;
 wire [0:7] vdp_b_;
 
-wire [5:0] vdp_r = vdp_r_[2:7];
-wire [5:0] vdp_g = vdp_g_[2:7];
-wire [5:0] vdp_b = vdp_b_[2:7];
+wire [5:0] vdp_r = { vdp_r_[0],vdp_r_[1],vdp_r_[2],vdp_r_[3],vdp_r_[4],vdp_r_[5] } ;
+wire [5:0] vdp_g = { vdp_g_[0],vdp_g_[1],vdp_g_[2],vdp_g_[3],vdp_g_[4],vdp_g_[5] } ;
+wire [5:0] vdp_b = { vdp_b_[0],vdp_b_[1],vdp_b_[2],vdp_b_[3],vdp_b_[4],vdp_b_[5] } ;
 
 wire vram_ce;
 wire vram_oe;
@@ -466,16 +466,16 @@ reg [15:0] hcnt;
 reg [15:0] vcnt;
 always @(posedge ram_clock) begin
 	if(RESET) begin
-		hcnt <= 0;
+		hcnt <= -36; //-{ 8'b0, LED_latch };
 		vcnt <= 0;
 	end
 	else begin
 		if(vdp_5m) begin
 			hcnt <= hcnt + 1;
-			if(hcnt == 342) begin
+			if(hcnt == 341) begin
 				hcnt <= 0;
 				vcnt <= vcnt + 1;
-				if(vcnt == 262) vcnt <= 0;
+				if(vcnt == 260) vcnt <= 0;
 			end
 		end
 	end	
@@ -483,16 +483,30 @@ end
 
 parameter start = 80;
 
-wire test_vs = vcnt < 8  ? 0 : 1 ;
-wire test_hs = hcnt < 29 ? 0 : 1 ;
+wire test_vs = newdisp ? (vcnt < 4  ? 0 : 1) : vdp_hs;
+wire test_hs = newdisp ? (hcnt < 20 ? 0 : 1) : vdp_vs;
 
 wire [15:0] stripe = hcnt / 32;
 
 wire blank   = (vcnt < 8) || (hcnt < 60 || hcnt > 340);
 
+wire newdisp = LED_latch == 0;
+
+wire [5:0] test_r = newdisp ? (blank ? 0 : vdp_r) : vdp_r;
+wire [5:0] test_g = newdisp ? (blank ? 0 : vdp_g) : vdp_r;
+wire [5:0] test_b = newdisp ? (blank ? 0 : vdp_b) : vdp_r;
+
+/*
+wire [5:0] test_r = blank ? 0 : vdp_r | (vcnt > 190 ? (stripe[0] ? 6'b111111 : 0) : 0);
+wire [5:0] test_g = blank ? 0 : vdp_g | (vcnt > 190 ? (stripe[1] ? 6'b111111 : 0) : 0);
+wire [5:0] test_b = blank ? 0 : vdp_b | (vcnt > 190 ? (stripe[2] ? 6'b111111 : 0) : 0);
+*/
+
+/*
 wire [5:0] test_r = blank ? 0 : (stripe[0] ? 6'b111111 : 0);
 wire [5:0] test_g = blank ? 0 : (stripe[1] ? 6'b111111 : 0);
 wire [5:0] test_b = blank ? 0 : (stripe[2] ? 6'b111111 : 0);
+*/
 
 
 /******************************************************************************************/
@@ -810,7 +824,7 @@ always @(posedge ram_clock) begin
 		if(state == 2 && z80_ena && IORQ && M1) state <= 3;
 		if(state == 3 && z80_ena && IORQ && M1 && ctc_dout == 'h46) state <= 4;
 		
-		LED_latch <= (state == 4);		
+		// LED_latch <= (state == 4);		
 		
 		if(LED_SEL && WR) begin
 			LED_latch <= cpu_dout;			

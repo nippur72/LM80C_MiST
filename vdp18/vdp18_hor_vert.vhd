@@ -163,22 +163,22 @@ begin
         end if;
 
         -- Horizontal sync ----------------------------------------------------
-        if    cnt_hor_q = -64 then
+        if    cnt_hor_q = -74 then
           hsync_n_o <= '0';
-        elsif cnt_hor_q = -38 then
+        elsif cnt_hor_q = -54 then
           hsync_n_o <= '1';
         end if;
-        if    cnt_hor_q = -72 then
+        if    cnt_hor_q = -86 then
           hblank_q  <= true;
-        elsif cnt_hor_q = -14 then
+        elsif cnt_hor_q = -8 then
           hblank_q  <= false;
         end if;
 
         -- Vertical sync ------------------------------------------------------
         if is_pal_g = 1 then
-          if    cnt_vert_q = 244 and cnt_hor_q = -64 then
+          if    cnt_vert_q = 244 and cnt_hor_q = -74 then
             vsync_n_o <= '0';
-          elsif cnt_vert_q = 247 and cnt_hor_q = -64 then
+          elsif cnt_vert_q = 247 and cnt_hor_q = -74 then
             vsync_n_o <= '1';
           end if;
         else
