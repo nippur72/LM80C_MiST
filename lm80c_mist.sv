@@ -10,13 +10,18 @@
 // (FPGA pins are also uppercase)
 
 
-
-// TODO audio
-// TODO add scandoubler/scanlines
-// TODO YPbPr
-// TODO true/ita keyboard
+// TODO isolate LM80C in a module
+// TODO sdram
+// TODO prg load
+// TODO ram injection
+// TODO improve TMS9918 add dot pixels
+// TODO stereo output
+// TODO italian keyboard
+// TODO add mist_video
 // TODO modify BASTXT and PRGEND vectors in downloader
-
+// TODO sio, pio dummy modules
+// TODO parametrize downloader, share with Laser500_MiST
+// TODO color problem
 
 
 // top level module
@@ -74,20 +79,39 @@ wire [5:0] osd_r;
 wire [5:0] osd_g;
 wire [5:0] osd_b;
 
-osd osd (
-   .clk_sys    ( vdp_clock  ),	
+osd 
+#
+(
+	.OSD_AUTO_CE(0)
+)
+osd (
+/*
+   .clk_sys    ( ram_clock  ),	
+	.ce         ( vdp_ena    ),
+*/
+	.clk_sys    ( vdp_clock  ),
+	.ce         ( 1          ),	
 
    // spi for OSD
    .SPI_DI     ( SPI_DI     ),
    .SPI_SCK    ( SPI_SCK    ),
    .SPI_SS3    ( SPI_SS3    ),
 
+   .R_in       ( test_r      ),
+   .G_in       ( test_g      ),
+   .B_in       ( test_b      ),
+	
+   .HSync      ( test_hs    ),
+   .VSync      ( test_vs    ),
+
+/*	
    .R_in       ( vdp_r      ),
    .G_in       ( vdp_g      ),
    .B_in       ( vdp_b      ),
 	
    .HSync      ( vdp_hs     ),
    .VSync      ( vdp_vs     ),
+*/	
 	
    .R_out      ( osd_r      ),
    .G_out      ( osd_g      ),
@@ -97,7 +121,9 @@ osd osd (
 assign VGA_R = osd_r;
 assign VGA_G = osd_g;
 assign VGA_B = osd_b;
-assign VGA_HS = vdp_hs & vdp_vs;
+assign VGA_HS = ~(~test_hs | ~test_vs);
+//assign VGA_HS = ~(vdp_hs ^ vdp_vs);
+//assign VGA_HS = ~(~vdp_hs | ~vdp_vs);
 assign VGA_VS = 1;
 
 
@@ -110,7 +136,8 @@ assign VGA_VS = 1;
 // menu configuration string passed to user_io
 localparam conf_str = {
 	"LM80C;PRG;", // must be UPPERCASE
-	"T3,Reset"
+	"O1,Synchronize VDP,On,Off;",
+	"T3,Hard reset"	
 };
 
 localparam conf_str_len = $size(conf_str)>>3;
@@ -118,12 +145,14 @@ localparam conf_str_len = $size(conf_str)>>3;
 wire [7:0] status;       // the status register is controlled by the user_io module
 
 wire st_power_on = status[0];
+wire st_sync_vpd = ~status[1];  // 1=VDP has a synchronous clock, 0=original async clock
 wire st_reset    = status[3];
+
 
 user_io #
 (
 	.STRLEN(conf_str_len),
-	.PS2DIV(24)              // ps2 clock divider: CLOCK / 24 must be approx = 15 Khz
+	.PS2DIV(14)              // ps2 clock divider: CLOCK / 24 must be approx = 15 Khz
 )
 user_io ( 
 	.conf_str   ( conf_str   ),
@@ -135,8 +164,8 @@ user_io (
 
 	.status     ( status     ),
 	
-	.clk_sys    ( CLOCK ),
-	.clk_sd     ( CLOCK ),       // sd card clock
+	.clk_sys    ( ram_clock ),
+	.clk_sd     ( ram_clock ),       // sd card clock
 	 
 	// ps2 interface
 	.ps2_kbd_clk    ( ps2_kbd_clk    ),
@@ -160,22 +189,27 @@ wire   [31:0] img_size;    // size of image in bytes
 wire ps2_kbd_clk;
 wire ps2_kbd_data;
 
-reg  [7:0] port_A;
 wire [7:0] port_B;
 wire       reset_key;
+
+wire debug1;
+
+assign psg_IOA_out = 255;
+assign psg_IOB_in  = 255;
 
 keyboard keyboard 
 (
 	.reset    ( !pll_locked  ),
-	.clk      ( CLOCK        ),
+	.clk      ( ram_clock    ),
 
 	.ps2_clk  ( ps2_kbd_clk  ),
 	.ps2_data ( ps2_kbd_data ),
 	
-	.port_A   ( port_A    ),
-	.port_B   ( port_B    ),
+	.column_bits ( psg_IOA_in  ),
+	.row_select  ( psg_IOB_out ),
 	
-	.reset_key( reset_key )	
+	.reset_key( reset_key    ),
+	.debug1   ( debug1       )
 );
 
 		
@@ -235,7 +269,6 @@ eraser eraser(
 	.data     ( eraser_data )
 );
 
-
 	
 /******************************************************************************************/
 /******************************************************************************************/
@@ -250,37 +283,46 @@ eraser eraser(
 // CPU control signals
 wire [15:0] A;
 wire [7:0]  cpu_dout;
-wire WR;
-wire RD;
-wire IORQ;
-wire MREQ;
-wire M1;
+
+wire WR_n;
+wire RD_n;
+wire IORQ_n;
+wire MREQ_n;
+wire M1_n;
+
+wire WR   = ~WR_n;
+wire RD   = ~RD_n;
+wire IORQ = ~IORQ_n;
+wire MREQ = ~MREQ_n;
+wire M1   = ~M1_n;
 
 // t80cpu was taken from https://github.com/sorgelig/Amstrad_MiST by sorgelig
 
 t80pa cpu
 (
-	.reset_n ( RESET         ),  
+	.reset_n ( ~RESET        ),  
 	
-	.clk     ( CLOCK         ), 
+	.clk     ( ram_clock     ), 
+	
+	.CEN_p   ( z80_ena       ),	
 
 	.a       ( A             ),   
 	.DO      ( cpu_dout      ),   
 	.di      ( cpu_din       ),   
 	
-	.rd_n    ( RD            ),   
-	.wr_n    ( WR            ),   
+	.rd_n    ( RD_n          ),   
+	.wr_n    ( WR_n          ),   
 	
-	.iorq_n  ( IORQ          ),   
-	.mreq_n  ( MREQ          ),   
+	.iorq_n  ( IORQ_n        ),   
+	.mreq_n  ( MREQ_n        ),   
 
-	.int_n   ( INT           ),   
-	.nmi_n   ( VDP_INT       ),   
+	.int_n   ( INT_n /*| (long_counter < 100000000)*/ ),   
+	.nmi_n   ( 1 /*VDP_INT*/ ),   
 
-	.m1_n    ( M1            ),   
+	.m1_n    ( M1_n          ),   
 	.rfsh_n  ( 0             ),   
 	.busrq_n ( 1             ),   
-	.wait_n  ( ~cpu_ena      )    
+	.wait_n  ( ~WAIT         )    
 );
 
 
@@ -289,31 +331,59 @@ t80pa cpu
 /***************************************** @address decoder********************************/
 /******************************************************************************************/
 /******************************************************************************************/
- 
-wire PIO_SEL = (A[7:4] == 'b0000) & (MREQ & ~IORQ);
-wire CTC_SEL = (A[7:4] == 'b0001) & (MREQ & ~IORQ);
-wire SIO_SEL = (A[7:4] == 'b0010) & (MREQ & ~IORQ);
-wire VDP_SEL = (A[7:4] == 'b0011) & (MREQ & ~IORQ);
-wire PSG_SEL = (A[7:4] == 'b0100) & (MREQ & ~IORQ);
 
-wire U20A = IORQ | VDP_SEL;
- 
-wire CSR = RD | U20A;
-wire CSW = WR | U20A;
+reg PIO_SEL;
+reg CTC_SEL;
+reg SIO_SEL;
+reg VDP_SEL;
+reg PSG_SEL;
+reg LED_SEL;
+reg CSR;
+reg CSW;
+reg BDIR;
+reg BC;
+reg RAM_SEL;
+reg ROM_SEL;
 
-wire BDIR = ~(WR | PSG_SEL);
-wire BC   = ~(A[0] | PSG_SEL);
+reg [7:0] cpu_din;
 
-wire [7:0] cpu_din = (
-	PIO_SEL ? 0        :
-	CTC_SEL ? ctc_dout :
-	SIO_SEL ? 0        :
-	VDP_SEL ? vdp_dout :
-	PSG_SEL ? psg_dout : sdram_dout	
-);
 
-wire RAM_SEL =  A[15] & ~MREQ;
-wire ROM_SEL = ~A[15] & ~MREQ;
+always @(posedge ram_clock) begin
+
+	PIO_SEL <= (A[7:4] == 'b0000) & IORQ & ~MREQ;
+	CTC_SEL <= (A[7:4] == 'b0001) & IORQ & ~MREQ;
+	SIO_SEL <= (A[7:4] == 'b0010) & IORQ & ~MREQ;
+	VDP_SEL <= (A[7:4] == 'b0011) & IORQ & ~MREQ;
+	PSG_SEL <= (A[7:4] == 'b0100) & IORQ & ~MREQ;
+
+	// debug LED on port 255
+	LED_SEL <= (A[7:0] == 255) & IORQ & ~MREQ;
+	 
+	CSR <= RD_n | (IORQ_n | ~VDP_SEL);
+	CSW <= WR_n | (IORQ_n | ~VDP_SEL);
+
+	BDIR = ~(~WR | ~PSG_SEL);
+	BC   = ~(A[0] | ~PSG_SEL);
+
+	//RAM_SEL <=  A[15] & MREQ;
+	RAM_SEL <= MREQ && (A > 32767 && A < 49152);
+	ROM_SEL <= MREQ & A[15]==0;
+
+	if(RD) begin
+		cpu_din <= (
+			PIO_SEL ? 0         :
+			CTC_SEL ? ctc_dout  :
+			SIO_SEL ? 0         :
+			VDP_SEL ? vdp_dout  :
+			PSG_SEL ? psg_dout  :
+		   LED_SEL ? LED_latch : sdram_dout	
+		);		
+	end
+	else if(IORQ && M1) begin
+		cpu_din <= ctc_dout;
+	end
+
+end
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -326,6 +396,7 @@ wire ROM_SEL = ~A[15] & ~MREQ;
 
 wire VDP_INT;
 
+
 wire vdp_hs;
 wire vdp_vs;
 
@@ -333,13 +404,9 @@ wire [0:7] vdp_r_;
 wire [0:7] vdp_g_;
 wire [0:7] vdp_b_;
 
-wire [0:5] vdp_r__ = vdp_r_[2:5];		
-wire [0:5] vdp_g__ = vdp_g_[2:5];
-wire [0:5] vdp_b__ = vdp_b_[2:5];
-
-wire [5:0] vdp_r = vdp_r__;
-wire [5:0] vdp_g = vdp_g__;
-wire [5:0] vdp_b = vdp_b__;
+wire [5:0] vdp_r = { vdp_r_[0],vdp_r_[1],vdp_r_[2],vdp_r_[3],vdp_r_[4],vdp_r_[5] } ;
+wire [5:0] vdp_g = { vdp_g_[0],vdp_g_[1],vdp_g_[2],vdp_g_[3],vdp_g_[4],vdp_g_[5] } ;
+wire [5:0] vdp_b = { vdp_b_[0],vdp_b_[1],vdp_b_[2],vdp_b_[3],vdp_b_[4],vdp_b_[5] } ;
 
 wire vram_ce;
 wire vram_oe;
@@ -352,23 +419,27 @@ wire [0:7]  vram_dout;
 wire [7:0] vdp_dout;
 		
 vdp18_core
-/* 
+  
 #(
-	.is_pal_g(0),     // NTSC
-	.compat_rgb_(0)
+	.is_pal_g(0)     // NTSC	
 ) 
-*/
+
 vdp
 (
+	/*
+	.clk_i         ( ram_clock   ),
+	.clk_en_10m7_i ( vdp_ena     ),
+	*/
+	
 	.clk_i         ( vdp_clock   ),
 	.clk_en_10m7_i ( 1           ),
 
-	.reset_n_i     ( RESET       ),
+	.reset_n_i     ( ~RESET      ),
 	
    .csr_n_i       ( CSR         ),
    .csw_n_i       ( CSW         ),
 	
-   .mode_i        ( A[1] ),
+   .mode_i        ( A[1]        ),
 		
    .int_n_o       ( VDP_INT     ),
 	
@@ -391,12 +462,53 @@ vdp
 
 vram vram
 (
-  .address( vram_a    ),
-  .clock  ( vdp_clock ),
-  .data   ( vram_din  ),                       
-  .wren   ( vram_we   ),                       
-  .q      ( vram_dout )
+  .address( vram_a     ),
+  //.clock  ( ram_clock  ),
+  //.clock  ( tms_clock  ),
+  .clock  ( vdp_clock  ),
+  .data   ( vram_din   ),                       
+  .wren   ( vram_we    ),                       
+  .q      ( vram_dout  )
 );
+
+// @test
+reg [15:0] hcnt;
+reg [15:0] vcnt;
+reg flip = 0;
+
+always @(posedge vdp_clock) begin
+	if(RESET) begin
+		hcnt <= -38; //-{ 8'b0, LED_latch };
+		vcnt <= 0;
+	end
+	else begin
+		flip = ~flip;
+		if(flip) begin
+			hcnt <= hcnt + 1;
+			if(hcnt == 341) begin
+				hcnt <= 0;
+				vcnt <= vcnt + 1;
+				if(vcnt == 260) vcnt <= 0;
+			end
+		end
+	end	
+end
+
+parameter start = 80;
+
+wire test_vs = newdisp ? (vcnt < 4  ? 0 : 1) : vdp_hs;
+wire test_hs = newdisp ? (hcnt < 20 ? 0 : 1) : vdp_vs;
+
+wire [15:0] stripe = hcnt / 32;
+
+wire blank   = (vcnt < 8) || (hcnt < 60 || hcnt > 340);
+
+wire newdisp = LED_latch != 0;
+
+wire [5:0] test_r = newdisp ? (blank ? 0 : vdp_r) : vdp_r;
+wire [5:0] test_g = newdisp ? (blank ? 0 : vdp_g) : vdp_r;
+wire [5:0] test_b = newdisp ? (blank ? 0 : vdp_b) : vdp_r;
+
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -410,11 +522,17 @@ wire [7:0] CHANNEL_C; // PSG Output channel C
 
 wire [7:0] psg_dout;
 
-AY8912 AY8912
+wire [7:0] psg_IOA_in;
+wire [7:0] psg_IOA_out;
+
+wire [7:0] psg_IOB_in;
+wire [7:0] psg_IOB_out;
+
+YM2149 YM2149
 (
-	.CLK   ( CLK2        ),
-	.CE    ( 1           ),
-	.RESET ( ~RESET      ),
+	.CLK   ( ram_clock   ),
+	.CE    ( psg_ena     ),
+	.RESET ( RESET       ),
 	.BDIR  ( BDIR        ),
 	.BC    ( BC          ),
 	
@@ -425,17 +543,15 @@ AY8912 AY8912
 	.DI( cpu_dout ),
 	.DO( psg_dout ),
 
-	.SEL( 1 )
+	.SEL( 0 ),                   // 0=normal freq, 1=x2 freq
+	
+	.IOA_in  ( psg_IOA_in  ),
+	.IOA_out ( psg_IOA_out ),	
+	.IOB_in  ( psg_IOB_in  ),
+	.IOB_out ( psg_IOB_out )	
+	
 );
 
-/*
-module AY8912
-(
-   input        SEL,
-	input  [7:0] IO_in,
-	output [7:0] IO_out
-);
-*/
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -444,27 +560,26 @@ module AY8912
 /******************************************************************************************/
 
 wire [7:0] ctc_dout;
-wire INT;
+wire INT_n;
 
 z80ctc_top z80ctc_top
 (
-	.clock     ( CLOCK      ),
-	.clock_ena ( 1          ),
-	.reset     ( ~RESET     ),
+	.clock     ( ram_clock  ),
+	.clock_ena ( z80_ena    ),
+	.reset     ( RESET      ),
 	.din       ( cpu_dout   ),
 	.dout      ( ctc_dout   ),
 	.cpu_din   ( cpu_din    ),
-	.ce_n      ( CTC_SEL    ),
+	.ce_n      ( ~CTC_SEL   ),
 	.cs        ( A[1:0]     ),
-	.m1_n      ( M1         ),
-	.iorq_n    ( IORQ       ),
-	.rd_n      ( RD         ),
-   .int_n     ( INT        )
+	.m1_n      ( M1_n       ),
+	.iorq_n    ( IORQ_n     ),
+	.rd_n      ( RD_n       ),
+   .int_n     ( INT_n      )
 	
 	// trigger 0-3 are not connected
 	// daisy chain not available in this Z80CTC implementation
 );
-
 
 
 /******************************************************************************************/
@@ -474,19 +589,32 @@ z80ctc_top z80ctc_top
 /******************************************************************************************/
 
 wire pll_locked;
-wire vdp_clock;
 wire ram_clock;
+
+wire vdp_clock = st_sync_vpd ? F11M : F10M;
+
+reg [3:0] cnt = 0;
+
+always @(posedge ram_clock) begin
+	cnt <= cnt + 1;
+	if(cnt == 10) cnt <= 0;
+end
+
+wire z80_ena = cnt == 0 || cnt == 5;
+wire psg_ena = cnt == 0;
+
 wire CLOCK;
-wire CLK2;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     // PLL is running stable
-	 .c0     ( vdp_clock   ),     // 10.738635 MHz
-	 .c1     ( ram_clock   ),     // CLOCK * 8
-	 .c2     ( CLOCK       ),     // 3.686400 MHz
-	 .c3     ( CLK2        )      // CLOCK / 2 for the PSG
+	 .c0     ( ram_clock   ),     // 
+	 .c2     ( CLOCK       ),     // 
+	 .c1     ( F11M        ),     // 
+	 .c4     ( F10M        )      // 	 
 );
+
+wire tms_clock;
 
 
 /******************************************************************************************/
@@ -505,7 +633,7 @@ wire        sdram_rd     ;
 wire [7:0]  sdram_dout   ; 
 wire [7:0]  sdram_din    ; 
 
-always @(*) begin
+always @(posedge ram_clock) begin
 	if(is_downloading) begin
 		sdram_din    = download_data;
 		sdram_addr   = download_addr;
@@ -527,12 +655,22 @@ always @(*) begin
 	else begin
 		sdram_din    = cpu_dout;
 		sdram_addr   = A;
-		sdram_wr     = ~WR & ~MREQ & RAM_SEL;
-		sdram_rd     = ~RD & ~MREQ;
+		sdram_wr     = WR & MREQ & RAM_SEL;
+		sdram_rd     = RD & MREQ;
 	end	
 end
 
+sysram sysram 
+(
+  .address( sdram_addr[15:0] ),
+  .clock  ( ram_clock        ),
+  .data   ( sdram_din        ),                       
+  .wren   ( sdram_wr         ),                       
+  .q      ( sdram_dout       )
+);
 
+
+/*
 // sdram from zx spectrum core	
 sdram sdram (
 	// interface to the MT48LC16M16 chip
@@ -557,7 +695,7 @@ sdram sdram (
    .oe         	 ( sdram_rd                  ),	
    .dout           ( sdram_dout                )	
 );
-
+*/
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -566,12 +704,21 @@ sdram sdram (
 /******************************************************************************************/
 
 // stops the cpu when booting, downloading or erasing
-wire cpu_ena = ~boot_completed | is_downloading | eraser_busy | debugger_busy;
+wire WAIT = ~boot_completed | is_downloading | eraser_busy | debugger_busy;
 
 // reset while booting or when the physical reset key is pressed
-// RESET is low active and goes into: t80a, vdp, psg, ctc
-wire RESET = ~(~boot_completed | reset_key); 
+// RESET goes into: t80a, vdp, psg, ctc
+wire RESET = ~boot_completed | reset_key | eraser_busy; 
 
+reg [63:0] long_counter;
+always @(posedge ram_clock) begin
+	if(RESET) begin
+		long_counter <= 0;
+	end
+	else begin
+		long_counter <= long_counter + 1;
+	end		
+end
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -586,15 +733,15 @@ wire dac_audio_out;
 // TODO audio 
 dac #(.C_bits(16)) dac_AUDIO_L
 (
-	.clk_i  ( CLOCK         ),
+	.clk_i  ( ram_clock     ),
    .res_n_i( pll_locked    ),	
 	.dac_i  ( dac_audio_in  ),
 	.dac_o  ( dac_audio_out )
 );
 
-always @(posedge CLOCK) begin
-	AUDIO_L <= dac_audio_out ^ A[0];
-	AUDIO_R <= dac_audio_out ^ cpu_din[0];
+always @(posedge ram_clock) begin
+	AUDIO_L <= dac_audio_out;
+	AUDIO_R <= dac_audio_out;
 end
 
 
@@ -603,6 +750,8 @@ end
 /***************************************** @debug *****************************************/
 /******************************************************************************************/
 /******************************************************************************************/
+
+
 
 
 reg        debugger_busy;
@@ -615,14 +764,14 @@ reg        debug_wr;
 reg  [7:0] debug_counter;
 reg  [7:0] debug_ok;
 
-wire ready = RESET;  // negated logic
-
 reg debug;
 
 assign LED = ~debug;
 
-always @(posedge CLOCK) begin
-	if(!ready) begin
+/*
+// debugs that ROM is loaded correctly (first 4 bytes checked)
+always @(posedge ram_clock) begin
+	if(!RESET) begin
 		debugger_busy <= 0;	
 		debug_addr    <= 'hffff;
 		debug_counter <= 0;
@@ -630,22 +779,53 @@ always @(posedge CLOCK) begin
 		debug         <= 0;
 	end
 	else begin
-		if(!debug_done) begin
-			debugger_busy <= 1;
-			debug_addr    <= debug_addr + 1;
-			debug_wr      <= 0;
-			
-			if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
-			if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
-			if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
-			if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
+		if(z80_ena) begin
+			if(!debug_done) begin
+				debugger_busy <= 1;
+				debug_addr    <= debug_addr + 1;
+				debug_wr      <= 0;
+				
+				if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
+				if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
+				if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
+				if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
 
-			if(debug_addr == 4) begin
-				debugger_busy <= 0;
-				debug_done <= 1;
+				if(debug_addr == 4) begin
+					debugger_busy <= 0;
+					debug_done <= 1;
+				end
+				
+				if(debug_counter == 4) debug <= 1;					
 			end
 			
-			if(debug_counter == 4) debug <= 1;
+		end
+	end
+end
+*/
+
+// simulate a fictional LED peripheral
+reg [7:0] LED_latch = 1;
+
+reg [7:0] state;
+
+always @(posedge ram_clock) begin
+	if(RESET) begin
+		//LED_latch <= 0;
+		state <= 0;
+	end
+	else begin
+		//debug <= (LED_latch != 0);
+		debug <= debug1;
+		
+		if(state == 0 && INT_n == 1)            state <= 1;
+		if(state == 1 && INT_n == 0)            state <= 2;
+		if(state == 2 && z80_ena && IORQ && M1) state <= 3;
+		if(state == 3 && z80_ena && IORQ && M1 && ctc_dout == 'h46) state <= 4;
+		
+		// LED_latch <= (state == 4);		
+		
+		if(LED_SEL && WR) begin
+			LED_latch <= cpu_dout;			
 		end
 	end
 end
