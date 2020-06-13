@@ -14,10 +14,8 @@
 // TODO sdram
 // TODO prg load
 // TODO ram injection
-// TODO osd reset
 // TODO improve TMS9918 add dot pixels
 // TODO stereo output
-// TODO exact clock
 // TODO italian keyboard
 // TODO add mist_video
 // TODO modify BASTXT and PRGEND vectors in downloader
