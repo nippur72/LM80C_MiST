@@ -10,7 +10,6 @@
 // (FPGA pins are also uppercase)
 
 
-// TODO async vdp
 // TODO isolate LM80C in a module
 // TODO sdram
 // TODO prg load
@@ -481,8 +480,7 @@ vram vram
 reg [15:0] hcnt;
 reg [15:0] vcnt;
 reg flip = 0;
-//always @(posedge ram_clock) begin
-//always @(posedge tms_clock) begin
+
 always @(posedge vdp_clock) begin
 	if(RESET) begin
 		hcnt <= -38; //-{ 8'b0, LED_latch };
@@ -515,18 +513,6 @@ wire newdisp = LED_latch != 0;
 wire [5:0] test_r = newdisp ? (blank ? 0 : vdp_r) : vdp_r;
 wire [5:0] test_g = newdisp ? (blank ? 0 : vdp_g) : vdp_r;
 wire [5:0] test_b = newdisp ? (blank ? 0 : vdp_b) : vdp_r;
-
-/*
-wire [5:0] test_r = blank ? 0 : vdp_r | (vcnt > 190 ? (stripe[0] ? 6'b111111 : 0) : 0);
-wire [5:0] test_g = blank ? 0 : vdp_g | (vcnt > 190 ? (stripe[1] ? 6'b111111 : 0) : 0);
-wire [5:0] test_b = blank ? 0 : vdp_b | (vcnt > 190 ? (stripe[2] ? 6'b111111 : 0) : 0);
-*/
-
-/*
-wire [5:0] test_r = blank ? 0 : (stripe[0] ? 6'b111111 : 0);
-wire [5:0] test_g = blank ? 0 : (stripe[1] ? 6'b111111 : 0);
-wire [5:0] test_b = blank ? 0 : (stripe[2] ? 6'b111111 : 0);
-*/
 
 
 /******************************************************************************************/
@@ -562,7 +548,7 @@ YM2149 YM2149
 	.DI( cpu_dout ),
 	.DO( psg_dout ),
 
-	.SEL( 0 ),                   // 1=divide clock by 2, make it compatible with AY-3-8910
+	.SEL( 0 ),                   // 0=normal freq, 1=x2 freq
 	
 	.IOA_in  ( psg_IOA_in  ),
 	.IOA_out ( psg_IOA_out ),	
