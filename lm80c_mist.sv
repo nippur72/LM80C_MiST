@@ -66,62 +66,48 @@ module lm80c_mist
 
 /******************************************************************************************/
 /******************************************************************************************/
-/***************************************** @osd *******************************************/
+/***************************************** @mist_video ************************************/
 /******************************************************************************************/
 /******************************************************************************************/
 
-// on screen display
-
-wire [5:0] osd_r;
-wire [5:0] osd_g;
-wire [5:0] osd_b;
-
-osd 
+mist_video 
 #
 (
-	.OSD_AUTO_CE(0)
-)
-osd (
-/*
-   .clk_sys    ( ram_clock  ),	
-	.ce         ( vdp_ena    ),
-*/
-	.clk_sys    ( vdp_clock  ),
-	.ce         ( 1          ),	
+	.SYNC_AND(1)
+) 
+mist_video
+(
+	.clk_sys(vdp_clock2x),       // twice the VDP clock for the scandoubler
 
-   // spi for OSD
-   .SPI_DI     ( SPI_DI     ),
-   .SPI_SCK    ( SPI_SCK    ),
-   .SPI_SS3    ( SPI_SS3    ),
+	// OSD SPI interface
+   .SPI_DI(SPI_DI),
+   .SPI_SCK(SPI_SCK),
+   .SPI_SS3(SPI_SS3),
 
-   .R_in       ( test_r      ),
-   .G_in       ( test_g      ),
-   .B_in       ( test_b      ),
-	
-   .HSync      ( test_hs    ),
-   .VSync      ( test_vs    ),
+	.scanlines(2'b00),           // scanlines (00-none 01-25% 10-50% 11-75%)	
+	.ce_divider(1),              // non-scandoubled pixel clock divider 0 - clk_sys/4, 1 - clk_sys/2
 
-/*	
-   .R_in       ( vdp_r      ),
-   .G_in       ( vdp_g      ),
-   .B_in       ( vdp_b      ),
+	.scandoubler_disable(1), // 0 = HVSync 31KHz, 1 = CSync 15KHz	
+	.no_csync(no_csync),                       // 1 = disable csync without scandoubler	
+	.ypbpr(ypbpr),                             // 1 = YPbPr output on composite sync
 	
-   .HSync      ( vdp_hs     ),
-   .VSync      ( vdp_vs     ),
-*/	
-	
-   .R_out      ( osd_r      ),
-   .G_out      ( osd_g      ),
-   .B_out      ( osd_b      )   
+	.rotate(2'b00),              // Rotate OSD [0] - rotate [1] - left or right	
+	.blend(0),                   // composite-like blending
+
+	// video input
+	.R(test_r),
+	.G(test_g),
+	.B(test_b),
+	.HSync(test_hs),
+	.VSync(test_vs),
+
+	// MiST video output signals
+	.VGA_R(VGA_R),
+	.VGA_G(VGA_G),
+	.VGA_B(VGA_B),
+	.VGA_VS(VGA_VS),
+	.VGA_HS(VGA_HS)
 );
-
-assign VGA_R = osd_r;
-assign VGA_G = osd_g;
-assign VGA_B = osd_b;
-assign VGA_HS = ~(~test_hs | ~test_vs);
-//assign VGA_HS = ~(vdp_hs ^ vdp_vs);
-//assign VGA_HS = ~(~vdp_hs | ~vdp_vs);
-assign VGA_VS = 1;
 
 
 /******************************************************************************************/
@@ -145,6 +131,10 @@ wire st_power_on     = status[0];
 //wire st_center_frame = ~status[2];  // 0=use original VDP output, 1=center frame
 wire st_reset        = status[3];
 
+wire scandoubler_disable;
+wire ypbpr;
+wire no_csync;
+
 
 user_io #
 (
@@ -159,6 +149,10 @@ user_io (
 	.SPI_MISO   ( SPI_DO     ),
 	.SPI_MOSI   ( SPI_DI     ),
 
+	.scandoubler_disable(scandoubler_disable),
+	.ypbpr(ypbpr),
+	.no_csync(no_csync),
+	
 	.status     ( status     ),
 	
 	.clk_sys    ( ram_clock ),
@@ -589,8 +583,10 @@ pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     
 	 .c0     ( ram_clock   ),     
-	 .c2     ( CLOCK       ),     
 	 .c1     ( vdp_clock   ),     
+	 .c2     ( CLOCK       ),     
+	 .c3     ( vdp_clock2x )
+	 
 );
 
 
