@@ -313,8 +313,8 @@ t80pa cpu
 	.iorq_n  ( IORQ_n        ),   
 	.mreq_n  ( MREQ_n        ),   
 
-	.int_n   ( INT_n /*| (long_counter < 100000000)*/ ),   
-	.nmi_n   ( 1 /*VDP_INT*/ ),   
+	.int_n   ( INT_n         ),   
+	.nmi_n   ( VDP_INT_n     ),   
 
 	.m1_n    ( M1_n          ),   
 	.rfsh_n  ( 0             ),   
@@ -391,7 +391,7 @@ end
 // this TMS9918A implementation is from 
 // https://github.com/wsoltys/mist-cores/tree/master/fpga_colecovision/src/vdp18
 
-wire VDP_INT;
+wire VDP_INT_n;
 
 
 wire vdp_hs;
@@ -438,7 +438,7 @@ vdp
 	
    .mode_i        ( A[1]        ),
 		
-   .int_n_o       ( VDP_INT     ),
+   .int_n_o       ( VDP_INT_n   ),
 	
    .cd_i          ( cpu_dout    ),
    .cd_o          ( vdp_dout    ),
