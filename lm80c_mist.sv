@@ -490,7 +490,6 @@ always @(posedge vdp_clock) begin
 	end
 	else begin
 		flip = ~flip;
-		//if(vdp_5m) begin
 		if(flip) begin
 			hcnt <= hcnt + 1;
 			if(hcnt == 341) begin
@@ -551,7 +550,7 @@ wire [7:0] psg_IOB_out;
 YM2149 YM2149
 (
 	.CLK   ( ram_clock   ),
-	.CE    ( z80_ena     ),
+	.CE    ( psg_ena     ),
 	.RESET ( RESET       ),
 	.BDIR  ( BDIR        ),
 	.BC    ( BC          ),
@@ -563,7 +562,7 @@ YM2149 YM2149
 	.DI( cpu_dout ),
 	.DO( psg_dout ),
 
-	.SEL( 1 ),                   // 1=divide clock by 2, make it compatible with AY-3-8910
+	.SEL( 0 ),                   // 1=divide clock by 2, make it compatible with AY-3-8910
 	
 	.IOA_in  ( psg_IOA_in  ),
 	.IOA_out ( psg_IOA_out ),	
@@ -613,35 +612,22 @@ wire ram_clock;
 
 wire vdp_clock = st_sync_vpd ? F11M : F10M;
 
-/*
-wire CLOCK;
-wire CLK2;
-*/
-
-reg [2:0] cnt = 0;
-reg [2:0] cnt1 = 0;
+reg [3:0] cnt = 0;
 
 always @(posedge ram_clock) begin
 	cnt <= cnt + 1;
-	cnt1 <= cnt1 + 1;
-	if(cnt == 5) cnt <= 0;
+	if(cnt == 10) cnt <= 0;
 end
 
-wire vdp_5m  = cnt1 == 0 || cnt1==4;
-
-wire z80_ena = cnt == 0;
+wire z80_ena = cnt == 0 || cnt == 5;
+wire psg_ena = cnt == 0;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     // PLL is running stable
 	 .c0     ( ram_clock   ),     // 
 	 .c1     ( F11M        ),     // 
-	 .c4     ( F10M        )      // 
-	 
-	 /*
-	 .c2     ( CLOCK       ),     // 
-	 .c3     ( CLK2        )      // 
-	 */	 
+	 .c4     ( F10M        )      // 	 
 );
 
 wire tms_clock;
