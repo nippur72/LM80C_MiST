@@ -10,11 +10,8 @@
 // (FPGA pins are also uppercase)
 
 
-// TODO isolate LM80C in a module
 // TODO sdram
-// TODO prg load
-// TODO ram injection
-// TODO improve TMS9918 add dot pixels
+// TODO isolate LM80C in a module
 // TODO stereo output
 // TODO italian keyboard
 // TODO add mist_video
@@ -136,7 +133,7 @@ assign VGA_VS = 1;
 // menu configuration string passed to user_io
 localparam conf_str = {
 	"LM80C;PRG;", // must be UPPERCASE
-	"O1,Synchronize VDP,On,Off;",
+	"O1,Synchronous VDP,On,Off;",
 	"T3,Hard reset"	
 };
 
@@ -588,33 +585,41 @@ z80ctc_top z80ctc_top
 /******************************************************************************************/
 /******************************************************************************************/
 
-wire pll_locked;
 wire ram_clock;
+wire CLOCK;
+wire F11M;
+wire F10M;
+
+wire pll_locked = pll_sys_locked & pll_tms9918_locked;
+wire pll_sys_locked;
+wire pll_tms9918_locked;
+
+pll pll (
+	 .inclk0 ( CLOCK_27[0] ),
+	 .locked ( pll_sys_locked  ),     
+	 .c0     ( ram_clock       ),     
+	 .c2     ( CLOCK           ),     
+	 .c1     ( F11M            ),     
+);
+
+
+pll_tms9918 pll_tms9918 (
+	 .inclk0 ( CLOCK_27[0]         ),
+	 .locked ( pll_tms9918_locked  ),     
+	 .c0     ( F10M                ),    
+);
+
 
 wire vdp_clock = st_sync_vpd ? F11M : F10M;
 
 reg [3:0] cnt = 0;
 
 always @(posedge ram_clock) begin
-	cnt <= cnt + 1;
-	if(cnt == 10) cnt <= 0;
+	cnt <= cnt + 1;	
 end
 
-wire z80_ena = cnt == 0 || cnt == 5;
+wire z80_ena = cnt == 0 || cnt == 8;
 wire psg_ena = cnt == 0;
-
-wire CLOCK;
-
-pll pll (
-	 .inclk0 ( CLOCK_27[0] ),
-	 .locked ( pll_locked  ),     // PLL is running stable
-	 .c0     ( ram_clock   ),     // 
-	 .c2     ( CLOCK       ),     // 
-	 .c1     ( F11M        ),     // 
-	 .c4     ( F10M        )      // 	 
-);
-
-wire tms_clock;
 
 
 /******************************************************************************************/
