@@ -134,6 +134,7 @@ assign VGA_VS = 1;
 localparam conf_str = {
 	"LM80C;PRG;", // must be UPPERCASE
 	"O1,Synchronous VDP,On,Off;",
+	"O2,Center VDP frame,On,Off;",
 	"T3,Hard reset"	
 };
 
@@ -141,9 +142,10 @@ localparam conf_str_len = $size(conf_str)>>3;
 
 wire [7:0] status;       // the status register is controlled by the user_io module
 
-wire st_power_on = status[0];
-wire st_sync_vpd = ~status[1];  // 1=VDP has a synchronous clock, 0=original async clock
-wire st_reset    = status[3];
+wire st_power_on     = status[0];
+wire st_sync_vpd     = ~status[1];  // 1=VDP has a synchronous clock, 0=original async clock
+wire st_center_frame = ~status[2];  // 0=use original VDP output, 1=center frame
+wire st_reset        = status[3];
 
 
 user_io #
@@ -491,20 +493,16 @@ always @(posedge vdp_clock) begin
 	end	
 end
 
-parameter start = 80;
-
-wire test_vs = newdisp ? (vcnt < 4  ? 0 : 1) : vdp_hs;
-wire test_hs = newdisp ? (hcnt < 20 ? 0 : 1) : vdp_vs;
+wire test_vs = st_center_frame ? (vcnt < 4  ? 0 : 1) : vdp_hs;
+wire test_hs = st_center_frame ? (hcnt < 20 ? 0 : 1) : vdp_vs;
 
 wire [15:0] stripe = hcnt / 32;
 
 wire blank   = (vcnt < 8) || (hcnt < 60 || hcnt > 340);
 
-wire newdisp = LED_latch != 0;
-
-wire [5:0] test_r = newdisp ? (blank ? 0 : vdp_r) : vdp_r;
-wire [5:0] test_g = newdisp ? (blank ? 0 : vdp_g) : vdp_r;
-wire [5:0] test_b = newdisp ? (blank ? 0 : vdp_b) : vdp_r;
+wire [5:0] test_r = st_center_frame ? (blank ? 0 : vdp_r) : vdp_r;
+wire [5:0] test_g = st_center_frame ? (blank ? 0 : vdp_g) : vdp_r;
+wire [5:0] test_b = st_center_frame ? (blank ? 0 : vdp_b) : vdp_r;
 
 
 /******************************************************************************************/
@@ -629,8 +627,8 @@ wire psg_ena = cnt == 0;
 /******************************************************************************************/
 							
 // SDRAM control signals
-assign SDRAM_CKE = pll_locked; // was: 1'b1;
-assign SDRAM_CLK = ram_clock;
+//assign SDRAM_CKE = pll_locked; // was: 1'b1;
+//assign SDRAM_CLK = ram_clock;
 
 wire [24:0] sdram_addr   ;
 wire        sdram_wr     ;
@@ -674,7 +672,6 @@ sysram sysram
   .q      ( sdram_dout       )
 );
 
-
 /*
 // sdram from zx spectrum core	
 sdram sdram (
@@ -701,6 +698,38 @@ sdram sdram (
    .dout           ( sdram_dout                )	
 );
 */
+
+/*
+// sdram from fpgacoleco
+sdram sdram (
+                                  
+	// interface to the MT48LC16M16 chip
+   .SDRAM_DQ       ( SDRAM_DQ                  ),
+   .SDRAM_A        ( SDRAM_A                   ),
+   .SDRAM_DQMH     ( SDRAM_DQMH                ),
+   .SDRAM_DQML     ( SDRAM_DQML                ),
+   .SDRAM_nCS      ( SDRAM_nCS                 ),
+   .SDRAM_BA       ( SDRAM_BA                  ),
+   .SDRAM_nWE      ( SDRAM_nWE                 ),
+   .SDRAM_nRAS     ( SDRAM_nRAS                ),
+   .SDRAM_nCAS     ( SDRAM_nCAS                ),
+	.SDRAM_CKE      ( SDRAM_CKE                 ),
+	
+	.wtbt           ( 2'b00                     ),
+
+   // system interface
+   .clk            ( !ram_clock                ),   
+   .init           ( !pll_locked               ),
+
+   // cpu interface	
+	.dout           ( sdram_dout                ),	
+   .din            ( sdram_din                 ),
+   .addr           ( sdram_addr                ),
+   .we             ( sdram_wr                  ),
+   .rd         	 ( sdram_rd                  )	   
+);
+*/
+
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -809,23 +838,24 @@ end
 */
 
 // simulate a fictional LED peripheral
-reg [7:0] LED_latch = 1;
+reg [7:0] LED_latch = 0;
 
 reg [7:0] state;
 
 always @(posedge ram_clock) begin
 	if(RESET) begin
-		//LED_latch <= 0;
+		LED_latch <= 0;
 		state <= 0;
 	end
 	else begin
-		//debug <= (LED_latch != 0);
-		debug <= debug1;
+		debug <= (LED_latch != 0);
+
+		//debug <= debug1;
 		
-		if(state == 0 && INT_n == 1)            state <= 1;
-		if(state == 1 && INT_n == 0)            state <= 2;
-		if(state == 2 && z80_ena && IORQ && M1) state <= 3;
-		if(state == 3 && z80_ena && IORQ && M1 && ctc_dout == 'h46) state <= 4;
+		//if(state == 0 && INT_n == 1)            state <= 1;
+		//if(state == 1 && INT_n == 0)            state <= 2;
+		//if(state == 2 && z80_ena && IORQ && M1) state <= 3;
+		//if(state == 3 && z80_ena && IORQ && M1 && ctc_dout == 'h46) state <= 4;
 		
 		// LED_latch <= (state == 4);		
 		
