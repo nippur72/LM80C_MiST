@@ -10,16 +10,15 @@
 // (FPGA pins are also uppercase)
 
 
-// TODO sdram
-// TODO isolate LM80C in a module
-// TODO stereo output
-// TODO italian keyboard
+// TODO sdram (test out port)
 // TODO add mist_video
+// TODO isolate LM80C in a module
+// TODO italian keyboard
 // TODO modify BASTXT and PRGEND vectors in downloader
 // TODO sio, pio dummy modules
 // TODO parametrize downloader, share with Laser500_MiST
 // TODO color problem
-
+// *TODO stereo output
 
 // top level module
 								   
@@ -133,7 +132,7 @@ assign VGA_VS = 1;
 // menu configuration string passed to user_io
 localparam conf_str = {
 	"LM80C;PRG;", // must be UPPERCASE
-	"O2,Center VDP frame,On,Off;",
+	//"O2,Center VDP frame,On,Off;",
 	"T3,Hard reset"	
 };
 
@@ -142,7 +141,7 @@ localparam conf_str_len = $size(conf_str)>>3;
 wire [7:0] status;       // the status register is controlled by the user_io module
 
 wire st_power_on     = status[0];
-wire st_center_frame = ~status[2];  // 0=use original VDP output, 1=center frame
+//wire st_center_frame = ~status[2];  // 0=use original VDP output, 1=center frame
 wire st_reset        = status[3];
 
 
@@ -475,7 +474,7 @@ reg flip = 0;
 
 always @(posedge vdp_clock) begin
 	if(RESET) begin
-		hcnt <= -38; //-{ 8'b0, LED_latch };
+		hcnt <= -36; //-{ 8'b0, LED_latch };
 		vcnt <= 0;
 	end
 	else begin
@@ -491,16 +490,14 @@ always @(posedge vdp_clock) begin
 	end	
 end
 
-wire test_vs = st_center_frame ? (vcnt < 4  ? 0 : 1) : vdp_hs;
-wire test_hs = st_center_frame ? (hcnt < 20 ? 0 : 1) : vdp_vs;
-
-wire [15:0] stripe = hcnt / 32;
+wire test_vs = 1 ? (vcnt < 4  ? 0 : 1) : vdp_hs;
+wire test_hs = 1 ? (hcnt < 20 ? 0 : 1) : vdp_vs;
 
 wire blank   = (vcnt < 8) || (hcnt < 60 || hcnt > 340);
 
-wire [5:0] test_r = st_center_frame ? (blank ? 0 : vdp_r) : vdp_r;
-wire [5:0] test_g = st_center_frame ? (blank ? 0 : vdp_g) : vdp_r;
-wire [5:0] test_b = st_center_frame ? (blank ? 0 : vdp_b) : vdp_r;
+wire [5:0] test_r = 1 ? (blank ? 0 : vdp_r) : vdp_r;
+wire [5:0] test_g = 1 ? (blank ? 0 : vdp_g) : vdp_r;
+wire [5:0] test_b = 1 ? (blank ? 0 : vdp_b) : vdp_r;
 
 
 /******************************************************************************************/
@@ -746,23 +743,33 @@ end
 /******************************************************************************************/
 /******************************************************************************************/
 
-wire [9:0] channel_sum = CHANNEL_A + CHANNEL_B + CHANNEL_C;
-wire [15:0] dac_audio_in = { channel_sum, 6'b000000 };
-wire dac_audio_out; 
+wire [15:0] dac_audio_L_in = { CHANNEL_A + CHANNEL_C, 6'b000000 };
+wire        dac_audio_L_out; 
+
+wire [15:0] dac_audio_R_in = { CHANNEL_B + CHANNEL_C, 6'b000000 };
+wire        dac_audio_R_out; 
 
 // TODO audio 
 dac #(.C_bits(16)) dac_AUDIO_L
 (
 	.clk_i  ( ram_clock     ),
    .res_n_i( pll_locked    ),	
-	.dac_i  ( dac_audio_in  ),
-	.dac_o  ( dac_audio_out )
+	.dac_i  ( dac_audio_L_in  ),
+	.dac_o  ( dac_audio_L_out )
 );
 
-always @(posedge ram_clock) begin
-	AUDIO_L <= dac_audio_out;
-	AUDIO_R <= dac_audio_out;
-end
+// TODO audio 
+dac #(.C_bits(16)) dac_AUDIO_R
+(
+	.clk_i  ( ram_clock     ),
+   .res_n_i( pll_locked    ),	
+	.dac_i  ( dac_audio_R_in  ),
+	.dac_o  ( dac_audio_R_out )
+);
+
+
+assign AUDIO_L = dac_audio_L_out;
+assign AUDIO_R = dac_audio_R_out;
 
 
 /******************************************************************************************/
