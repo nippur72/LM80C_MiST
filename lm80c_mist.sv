@@ -10,8 +10,8 @@
 // (FPGA pins are also uppercase)
 
 
-// TODO color problem
 // TODO async vdp
+// TODO isolate LM80C in a module
 // TODO sdram
 // TODO prg load
 // TODO ram injection
@@ -24,7 +24,7 @@
 // TODO modify BASTXT and PRGEND vectors in downloader
 // TODO sio, pio dummy modules
 // TODO parametrize downloader, share with Laser500_MiST
-
+// TODO color problem
 
 
 // top level module
@@ -88,8 +88,12 @@ osd
 	.OSD_AUTO_CE(0)
 )
 osd (
+/*
    .clk_sys    ( ram_clock  ),	
 	.ce         ( vdp_ena    ),
+*/
+	.clk_sys    ( vdp_clock  ),
+	.ce         ( 1          ),	
 
    // spi for OSD
    .SPI_DI     ( SPI_DI     ),
@@ -135,6 +139,7 @@ assign VGA_VS = 1;
 // menu configuration string passed to user_io
 localparam conf_str = {
 	"LM80C;PRG;", // must be UPPERCASE
+	"O1,Synchronize VDP,On,Off;",
 	"T3,Reset"
 };
 
@@ -143,7 +148,9 @@ localparam conf_str_len = $size(conf_str)>>3;
 wire [7:0] status;       // the status register is controlled by the user_io module
 
 wire st_power_on = status[0];
+wire st_sync_vpd = ~status[1];  // 1=VDP has a synchronous clock, 0=original async clock
 wire st_reset    = status[3];
+
 
 user_io #
 (
@@ -425,8 +432,13 @@ vdp18_core
 
 vdp
 (
+	/*
 	.clk_i         ( ram_clock   ),
 	.clk_en_10m7_i ( vdp_ena     ),
+	*/
+	
+	.clk_i         ( vdp_clock   ),
+	.clk_en_10m7_i ( 1           ),
 
 	.reset_n_i     ( ~RESET      ),
 	
@@ -457,7 +469,9 @@ vdp
 vram vram
 (
   .address( vram_a     ),
-  .clock  ( ram_clock  ),
+  //.clock  ( ram_clock  ),
+  //.clock  ( tms_clock  ),
+  .clock  ( vdp_clock  ),
   .data   ( vram_din   ),                       
   .wren   ( vram_we    ),                       
   .q      ( vram_dout  )
@@ -466,13 +480,18 @@ vram vram
 // @test
 reg [15:0] hcnt;
 reg [15:0] vcnt;
-always @(posedge ram_clock) begin
+reg flip = 0;
+//always @(posedge ram_clock) begin
+//always @(posedge tms_clock) begin
+always @(posedge vdp_clock) begin
 	if(RESET) begin
 		hcnt <= -38; //-{ 8'b0, LED_latch };
 		vcnt <= 0;
 	end
 	else begin
-		if(vdp_5m) begin
+		flip = ~flip;
+		//if(vdp_5m) begin
+		if(flip) begin
 			hcnt <= hcnt + 1;
 			if(hcnt == 341) begin
 				hcnt <= 0;
@@ -590,10 +609,14 @@ z80ctc_top z80ctc_top
 /******************************************************************************************/
 
 wire pll_locked;
-wire vdp_clock;
 wire ram_clock;
+
+wire vdp_clock = st_sync_vpd ? F11M : F10M;
+
+/*
 wire CLOCK;
 wire CLK2;
+*/
 
 reg [2:0] cnt = 0;
 reg [2:0] cnt1 = 0;
@@ -604,7 +627,6 @@ always @(posedge ram_clock) begin
 	if(cnt == 5) cnt <= 0;
 end
 
-wire vdp_ena = cnt1 == 0 || cnt1 == 2 || cnt1==4 || cnt1 == 6;
 wire vdp_5m  = cnt1 == 0 || cnt1==4;
 
 wire z80_ena = cnt == 0;
@@ -613,10 +635,16 @@ pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     // PLL is running stable
 	 .c0     ( ram_clock   ),     // 
-	 .c1     ( vdp_clock   ),     // 
+	 .c1     ( F11M        ),     // 
+	 .c4     ( F10M        )      // 
+	 
+	 /*
 	 .c2     ( CLOCK       ),     // 
 	 .c3     ( CLK2        )      // 
+	 */	 
 );
+
+wire tms_clock;
 
 
 /******************************************************************************************/
