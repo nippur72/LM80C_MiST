@@ -243,7 +243,7 @@ downloader downloader (
    .ROM_done    ( boot_completed  ),	
 	         
    // external ram interface
-   .clk   ( cnt[1]  ),
+   .clk   ( CLOCK         ),
    .wr    ( download_wr   ),
    .addr  ( download_addr ),
    .data  ( download_data )
@@ -608,10 +608,13 @@ end
 wire z80_ena = cnt == 0 || cnt == 5;
 wire psg_ena = cnt == 0;
 
+wire CLOCK;
+
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     // PLL is running stable
 	 .c0     ( ram_clock   ),     // 
+	 .c2     ( CLOCK       ),     // 
 	 .c1     ( F11M        ),     // 
 	 .c4     ( F10M        )      // 	 
 );
