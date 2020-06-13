@@ -139,7 +139,7 @@ assign VGA_VS = 1;
 localparam conf_str = {
 	"LM80C;PRG;", // must be UPPERCASE
 	"O1,Synchronize VDP,On,Off;",
-	"T3,Reset"
+	"T3,Hard reset"	
 };
 
 localparam conf_str_len = $size(conf_str)>>3;
@@ -256,7 +256,6 @@ downloader downloader (
 /******************************************************************************************/
 /******************************************************************************************/
 
-/*
 wire eraser_busy;
 wire eraser_wr;
 wire [24:0] eraser_addr;
@@ -271,8 +270,6 @@ eraser eraser(
 	.addr     ( eraser_addr ),
 	.data     ( eraser_data )
 );
-*/
-
 
 	
 /******************************************************************************************/
@@ -645,14 +642,12 @@ always @(posedge ram_clock) begin
 		sdram_wr     = download_wr;
 		sdram_rd     = 1'b1;
 	end	
-	/*
 	else if(eraser_busy) begin		
 		sdram_din    = eraser_data;
 		sdram_addr   = eraser_addr;
 		sdram_wr     = eraser_wr;
 		sdram_rd     = 1'b1;		
 	end	
-	*/
 	else if(debugger_busy) begin		
 		sdram_din     = debug_data_wr;		
 		sdram_addr    = debug_addr;
@@ -711,11 +706,11 @@ sdram sdram (
 /******************************************************************************************/
 
 // stops the cpu when booting, downloading or erasing
-wire WAIT = ~boot_completed | is_downloading /*| eraser_busy*/ | debugger_busy;
+wire WAIT = ~boot_completed | is_downloading | eraser_busy | debugger_busy;
 
 // reset while booting or when the physical reset key is pressed
 // RESET goes into: t80a, vdp, psg, ctc
-wire RESET = ~boot_completed | reset_key; 
+wire RESET = ~boot_completed | reset_key | eraser_busy; 
 
 reg [63:0] long_counter;
 always @(posedge ram_clock) begin
