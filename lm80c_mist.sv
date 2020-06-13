@@ -133,7 +133,6 @@ assign VGA_VS = 1;
 // menu configuration string passed to user_io
 localparam conf_str = {
 	"LM80C;PRG;", // must be UPPERCASE
-	"O1,Synchronous VDP,On,Off;",
 	"O2,Center VDP frame,On,Off;",
 	"T3,Hard reset"	
 };
@@ -143,7 +142,6 @@ localparam conf_str_len = $size(conf_str)>>3;
 wire [7:0] status;       // the status register is controlled by the user_io module
 
 wire st_power_on     = status[0];
-wire st_sync_vpd     = ~status[1];  // 1=VDP has a synchronous clock, 0=original async clock
 wire st_center_frame = ~status[2];  // 0=use original VDP output, 1=center frame
 wire st_reset        = status[3];
 
@@ -484,7 +482,7 @@ always @(posedge vdp_clock) begin
 		flip = ~flip;
 		if(flip) begin
 			hcnt <= hcnt + 1;
-			if(hcnt == 341) begin
+			if(hcnt == 341+5) begin
 				hcnt <= 0;
 				vcnt <= vcnt + 1;
 				if(vcnt == 260) vcnt <= 0;
@@ -585,30 +583,18 @@ z80ctc_top z80ctc_top
 
 wire ram_clock;
 wire CLOCK;
-wire F11M;
-wire F10M;
+wire vdp_clock;
 
-wire pll_locked = pll_sys_locked & pll_tms9918_locked;
-wire pll_sys_locked;
-wire pll_tms9918_locked;
+wire pll_locked;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
-	 .locked ( pll_sys_locked  ),     
-	 .c0     ( ram_clock       ),     
-	 .c2     ( CLOCK           ),     
-	 .c1     ( F11M            ),     
+	 .locked ( pll_locked  ),     
+	 .c0     ( ram_clock   ),     
+	 .c2     ( CLOCK       ),     
+	 .c1     ( vdp_clock   ),     
 );
 
-
-pll_tms9918 pll_tms9918 (
-	 .inclk0 ( CLOCK_27[0]         ),
-	 .locked ( pll_tms9918_locked  ),     
-	 .c0     ( F10M                ),    
-);
-
-
-wire vdp_clock = st_sync_vpd ? F11M : F10M;
 
 reg [3:0] cnt = 0;
 
