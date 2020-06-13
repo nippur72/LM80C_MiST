@@ -285,6 +285,7 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 8MA -to VGA_HS
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to UART_TX
 set_instance_assignment -name FAST_INPUT_REGISTER ON -to UART_RX
 
+set_global_assignment -name VHDL_FILE "mist-modules/dac.vhd"
 set_global_assignment -name SYSTEMVERILOG_FILE sdram.sv
 set_global_assignment -name SYSTEMVERILOG_FILE YM2149.sv
 set_global_assignment -name VHDL_FILE "vdp18/vdp18_sprite-c.vhd"
@@ -322,7 +323,6 @@ set_global_assignment -name VERILOG_FILE "mist-modules/osd.v"
 set_global_assignment -name VERILOG_FILE "mist-modules/user_io.v"
 set_global_assignment -name VERILOG_FILE "mist-modules/scandoubler.v"
 set_global_assignment -name VERILOG_FILE downloader.v
-set_global_assignment -name VHDL_FILE dac.vhd
 set_global_assignment -name VERILOG_FILE keyboard.v
 set_global_assignment -name VHDL_FILE ps2_intf.vhd
 set_global_assignment -name QIP_FILE pll.qip

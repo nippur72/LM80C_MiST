@@ -19,6 +19,7 @@
 // TODO parametrize downloader, share with Laser500_MiST
 // TODO color problem
 // *TODO stereo output
+// TODO bug volume 1,15:volume 2,15:volume 3,15:sound 3,200,200
 
 // top level module
 								   
