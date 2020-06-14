@@ -5,45 +5,15 @@ module keyboard (
 
 	// ps2 interface	
 	input ps2_clk,
-	input ps2_data,
-	
-	// AY-3-8910 chip interface
-   input  [ 7:0] row_select,   
-	output [ 7:0] column_bits,   	
-	
-	output reset_key,
-	
-	output debug1
-	
+	input ps2_data,	
+		
+	// lm80c interface
+	output reg [7:0] KM [7:0],       // the 8x8 keyboard matrix (low active)
+	output reg resetkey	            // 1=hardware reset key pressed
 );
 
 
 `include "ps2keys.v"
-
-
-reg resetkey;
-
-wire [7:0] KA = row_select;
-assign column_bits = KD;				
-assign reset_key = resetkey;
-
-reg debugflag = 0;
-
-assign debug1 = KD[0];
-
-// keyboard output
-
-wire [7:0] KD = ((KA[ 0] == 0) ? KM[ 0] : 8'b11111111) &
-                ((KA[ 1] == 0) ? KM[ 1] : 8'b11111111) & 
-			       ((KA[ 2] == 0) ? KM[ 2] : 8'b11111111) &
-				    ((KA[ 3] == 0) ? KM[ 3] : 8'b11111111) &
-				    ((KA[ 4] == 0) ? KM[ 4] : 8'b11111111) &
-				    ((KA[ 5] == 0) ? KM[ 5] : 8'b11111111) &
-				    ((KA[ 6] == 0) ? KM[ 6] : 8'b11111111) &
-				    ((KA[ 7] == 0) ? KM[ 7] : 8'b11111111) ;			
-
-// keyboard matrix 8x8
-reg [7:0] KM [7:0]; 
 
 wire [7:0] kdata;  // keyboard data byte, 0xE0 = extended key, 0xF0 release key
 wire valid;        // 1 = data byte contains valid keyboard data 
@@ -69,9 +39,7 @@ always @(posedge clk) begin
 		KM[7] <= 8'b11111111;			
 	end 
 	else begin		
-	
-		// if(KA == 8'b11111101) debugflag <= 1;
-		
+			
 		// ps2 decoder has received a valid byte
 		if(valid) begin
 			if(kdata == 8'he0) 
