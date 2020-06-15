@@ -285,6 +285,7 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 8MA -to VGA_HS
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to UART_TX
 set_instance_assignment -name FAST_INPUT_REGISTER ON -to UART_RX
 
+set_global_assignment -name SYSTEMVERILOG_FILE downloader.sv
 set_global_assignment -name VERILOG_FILE "mist-modules/sd_card.v"
 set_global_assignment -name SYSTEMVERILOG_FILE "mist-modules/rgb2ypbpr.sv"
 set_global_assignment -name QIP_FILE "mist-modules/pll.qip"
@@ -331,7 +332,6 @@ set_global_assignment -name VERILOG_FILE "mist-modules/data_io.v"
 set_global_assignment -name VERILOG_FILE "mist-modules/osd.v"
 set_global_assignment -name VERILOG_FILE "mist-modules/user_io.v"
 set_global_assignment -name VERILOG_FILE "mist-modules/scandoubler.v"
-set_global_assignment -name VERILOG_FILE downloader.v
 set_global_assignment -name VHDL_FILE ps2_intf.vhd
 set_global_assignment -name QIP_FILE pll.qip
 set_global_assignment -name SIGNALTAP_FILE laser500.stp

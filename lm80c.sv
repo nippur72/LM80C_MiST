@@ -27,7 +27,7 @@ module lm80c
 	output  [7:0] ram_dout,
 	input   [7:0] ram_din,
 	output        ram_rd,
-	output        ram_wr
+	output        ram_wr	
 );
 
 assign ram_addr = A;
@@ -119,10 +119,9 @@ always @(posedge sys_clock) begin
 	CTC_SEL <= (A[7:4] == 'b0001) & IORQ & ~MREQ;
 	SIO_SEL <= (A[7:4] == 'b0010) & IORQ & ~MREQ;
 	VDP_SEL <= (A[7:4] == 'b0011) & IORQ & ~MREQ;
-	PSG_SEL <= (A[7:4] == 'b0100) & IORQ & ~MREQ;
-
-	// debug LED on port 255
-	LED_SEL <= (A[7:0] == 255) & IORQ & ~MREQ;
+	PSG_SEL <= (A[7:4] == 'b0100) & IORQ & ~MREQ;	
+	
+	LED_SEL <= (A[7:0]>=200 || A[7:0]<=254) & IORQ & ~MREQ;
 	 
 	CSR <= RD_n | (IORQ_n | ~VDP_SEL);
 	CSW <= WR_n | (IORQ_n | ~VDP_SEL);
@@ -134,20 +133,20 @@ always @(posedge sys_clock) begin
 	RAM_SEL <= MREQ && (A > 32767 && A < 49152);
 	ROM_SEL <= MREQ & A[15]==0;
 
-	if(RD) begin
-		cpu_din <= (
-			PIO_SEL ? pio_dout  :
-			CTC_SEL ? ctc_dout  :
-			SIO_SEL ? sio_dout  :
-			VDP_SEL ? vdp_dout  :
-			PSG_SEL ? psg_dout  :
-		   /*LED_SEL ? LED_latch :*/ ram_din	
-		);		
-	end
-	else if(IORQ && M1) begin
-		cpu_din <= ctc_dout;
-	end
+	if(RD && IORQ) 
+		cpu_din <=  PIO_SEL ? pio_dout :
+						CTC_SEL ? ctc_dout :
+						SIO_SEL ? sio_dout :
+						VDP_SEL ? vdp_dout :
+						PSG_SEL ? psg_dout :
+						LED_SEL ? led_dout : A[7:0];		
 
+	if(RD && MREQ) 
+		cpu_din <= ram_din;
+		
+	if(IORQ && M1) 
+		cpu_din <= ctc_dout;
+	
 end
 
 /******************************************************************************************/
@@ -347,8 +346,8 @@ wire INT_n;
 
 z80ctc_top z80ctc_top
 (
-	.clock     ( sys_clock  ),
-	.clock_ena ( z80_ena    ),
+	.clock     ( CLOCK      ),
+	.clock_ena ( 1          ),
 	.reset     ( RESET      ),
 	.din       ( cpu_dout   ),
 	.dout      ( ctc_dout   ),
@@ -380,7 +379,13 @@ end
 wire z80_ena = cnt == 0 || cnt == 8;
 wire psg_ena = cnt == 0;
 
+/******************************************************************************************/
+/******************************************************************************************/
+/***************************************** @ena *******************************************/
+/******************************************************************************************/
+/******************************************************************************************/
 
+wire [7:0] led_dout = 33;			
 
 endmodule
 

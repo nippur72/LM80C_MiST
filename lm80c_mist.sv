@@ -2,13 +2,6 @@
 //
 // Antonino Porcino, nino.porcino@gmail.com
 //
-// Derived from source code by Till Harbaum (c) 2015
-//
-
-// Uppercase names are symbols defined in the official LM80C.pdf schematic
-//
-// (FPGA pins are also uppercase)
-
 
 // TODO sdram (test out port)
 // TODO italian keyboard
@@ -96,17 +89,6 @@ wire RESET = ~boot_completed | reset_key | eraser_busy;
 // stops the cpu when booting, downloading or erasing
 wire WAIT = ~boot_completed | is_downloading | eraser_busy | debugger_busy;
 
-/*
-reg [63:0] long_counter;
-always @(posedge sys_clock) begin
-	if(RESET) begin
-		long_counter <= 0;
-	end
-	else begin
-		long_counter <= long_counter + 1;
-	end		
-end
-*/
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -136,7 +118,6 @@ wire [7:0]  ram_din;
 wire        ram_rd;
 wire        ram_wr;	
 
-
 lm80c lm80c
 (	
 	.RESET ( RESET ),
@@ -162,11 +143,11 @@ lm80c lm80c
 	.KM(KM),	
 	
 	// RAM interface
-	.ram_addr ( ram_addr ),
-	.ram_dout ( ram_dout ),	
-	.ram_din  ( ram_din  ),
-	.ram_rd   ( ram_rd   ),
-	.ram_wr   ( ram_wr   )
+	.ram_addr ( ram_addr   ),
+	.ram_dout ( ram_dout   ),	
+	.ram_din  ( sdram_dout ),
+	.ram_rd   ( ram_rd     ),
+	.ram_wr   ( ram_wr     )
 );
 
 
@@ -203,8 +184,7 @@ keyboard keyboard
        
 // menu configuration string passed to user_io
 localparam conf_str = {
-	"LM80C;PRG;", // must be UPPERCASE
-	//"O2,Center VDP frame,On,Off;",
+	"LM80C;PRG;", // must be UPPERCASE	
 	"T3,Hard reset"	
 };
 
@@ -212,9 +192,8 @@ localparam conf_str_len = $size(conf_str)>>3;
 
 wire [7:0] status;       // the status register is controlled by the user_io module
 
-wire st_power_on     = status[0];
-//wire st_center_frame = ~status[2];  // 0=use original VDP output, 1=center frame
-wire st_reset        = status[3];
+wire st_power_on = status[0];
+wire st_reset    = status[3];
 
 wire scandoubler_disable;
 wire ypbpr;
@@ -313,8 +292,17 @@ wire [7:0]  download_data;
 wire        download_wr;
 wire        boot_completed;
 
+wire [23:0] ioctl_fileext;
+wire [31:0] ioctl_filesize;      	
+
 // ROM download helper
-downloader downloader (
+downloader 
+#(
+	.ROM_START_ADDR(25'h0000), // start of ROM 
+	.PRG_START_ADDR(25'h8241), // start of BASIC program in free RAM, firmware 3.13.3
+	.PTR_PROGND    (25'h81BB)  // pointer to end of basic program
+)
+downloader (
 	
 	// new SPI interface
    .SPI_DO ( SPI_DO  ),
@@ -332,7 +320,7 @@ downloader downloader (
    .clk   ( CLOCK         ),
    .wr    ( download_wr   ),
    .addr  ( download_addr ),
-   .data  ( download_data )
+   .data  ( download_data )	
 );
 
 
@@ -374,8 +362,8 @@ wire        sdram_rd     ;
 wire [7:0]  sdram_dout   ; 
 wire [7:0]  sdram_din    ; 
 
-always @(posedge sys_clock) begin
-	if(is_downloading) begin
+always @(*) begin
+	if(is_downloading && download_wr) begin
 		sdram_din    = download_data;
 		sdram_addr   = download_addr;
 		sdram_wr     = download_wr;
@@ -400,8 +388,6 @@ always @(posedge sys_clock) begin
 		sdram_rd     = ram_rd;
 	end	
 end
-
-assign ram_din = sdram_dout;   // RAM data byte goes into LM80C
 
 sysram sysram 
 (
@@ -502,7 +488,6 @@ dac #(.C_bits(8)) dac_R
 /******************************************************************************************/
 
 
-
 reg        debugger_busy;
 wire       debug_done;
 wire [7:0] debug_data_rd;
@@ -513,7 +498,7 @@ reg        debug_wr;
 reg  [7:0] debug_counter;
 reg  [7:0] debug_ok;
 
-reg debug;
+wire debug = debug_count != 0;
 
 assign LED = ~debug;
 
@@ -577,6 +562,28 @@ always @(posedge sys_clock) begin
 		
 		if(LED_SEL && WR) begin
 			LED_latch <= cpu_dout;			
+		end
+	end
+end
+*/
+
+/******************************************************************************************/
+/******************************************************************************************/
+/***************************************** @debug *****************************************/
+/******************************************************************************************/
+/******************************************************************************************/
+
+// wire [15:0] debug_count;
+
+wire [31:0] debug_count;
+wire [31:0] debug_min_addr;
+wire [31:0] debug_max_addr;
+
+/*
+always @(posedge sys_clock) begin
+	if(z80_ena) begin
+		if(LED_SEL && WR) begin
+			debug_count[A[3:0]] <= cpu_dout;
 		end
 	end
 end
