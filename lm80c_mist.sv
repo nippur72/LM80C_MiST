@@ -503,7 +503,7 @@ reg debug;
 assign LED = ~debug;
 
 // debugs that ROM is loaded correctly (first 4 bytes checked)
-always @(posedge CLOCK) begin
+always @(posedge sys_clock) begin
 	if(RESET) begin
 		debugger_busy <= 0;	
 		debug_addr    <= 'hffff;
@@ -512,7 +512,7 @@ always @(posedge CLOCK) begin
 		debug         <= 0;
 	end
 	else begin
-		
+		/*
 		if(!debug_done) begin
 			debugger_busy <= 1;
 			debug_addr    <= debug_addr + 1;
@@ -530,8 +530,11 @@ always @(posedge CLOCK) begin
 			
 			//if(debug_counter == 4) debug <= 1;					
 		end
-		
-		debug <= sdram_dout != true_sdram_dout;
+		*/
+		if(z80_ena) begin
+			debug_done <= 1;
+			debug <= sdram_dout != true_sdram_dout;
+		end 
 	end
 end
 
