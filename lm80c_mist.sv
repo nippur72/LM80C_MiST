@@ -357,9 +357,8 @@ eraser eraser(
 /******************************************************************************************/
 /******************************************************************************************/
 							
-// SDRAM control signals
-//assign SDRAM_CKE = pll_locked; // was: 1'b1;
-//assign SDRAM_CLK = sys_clock;
+assign SDRAM_CKE = pll_locked; // was: 1'b1 in lesson4/soc.v
+assign SDRAM_CLK = sdram_clock;
 
 wire [24:0] sdram_addr   ;
 wire        sdram_wr     ;
@@ -394,18 +393,20 @@ always @(*) begin
 	end	
 end
 
-sysram sysram 
-(
-  .clock  ( sys_clock        ),
-  .address( sdram_addr[15:0] ),  
-  .data   ( sdram_din        ),                       
-  .wren   ( sdram_wr         ),                       
-  .q      ( sdram_dout       )
-);
+// sdram module taken from from lesson4\sdram.v and 
+// modified to output the "initialized" signal
 
-/*
-// sdram from zx spectrum core	
-sdram sdram (
+// the sdram has the following requirements:
+//
+// - "sys_clock": 8x faster than cpu so that cpu reads in 1 cpu cycle
+// - "sdram_clock": 8x faster -2.5ns delayed clock so that SDRAM sees stable cpu signals
+// - timing constraints in .sdc file
+// - can't be accessed before it's initialized ("initialized" pin)
+
+wire sdram_initialized;
+
+sdram sdram 
+(
 	// interface to the MT48LC16M16 chip
    .sd_data        ( SDRAM_DQ                  ),
    .sd_addr        ( SDRAM_A                   ),
@@ -420,44 +421,24 @@ sdram sdram (
    .clk            ( sys_clock                 ),
    .clkref         ( CLOCK                     ),
    .init           ( !pll_locked               ),
+	//.initialized    ( sdram_initialized         ),
 
    // cpu interface	
    .din            ( sdram_din                 ),
    .addr           ( sdram_addr                ),
    .we             ( sdram_wr                  ),
-   .oe         	 ( sdram_rd                  ),	
+   .oe         	 ( 1 /*sdram_rd*/            ),	
    .dout           ( sdram_dout                )	
 );
-*/
 
 /*
-// sdram from fpgacoleco
-sdram sdram (
-                                  
-	// interface to the MT48LC16M16 chip
-   .SDRAM_DQ       ( SDRAM_DQ                  ),
-   .SDRAM_A        ( SDRAM_A                   ),
-   .SDRAM_DQMH     ( SDRAM_DQMH                ),
-   .SDRAM_DQML     ( SDRAM_DQML                ),
-   .SDRAM_nCS      ( SDRAM_nCS                 ),
-   .SDRAM_BA       ( SDRAM_BA                  ),
-   .SDRAM_nWE      ( SDRAM_nWE                 ),
-   .SDRAM_nRAS     ( SDRAM_nRAS                ),
-   .SDRAM_nCAS     ( SDRAM_nCAS                ),
-	.SDRAM_CKE      ( SDRAM_CKE                 ),
-	
-	.wtbt           ( 2'b00                     ),
-
-   // system interface
-   .clk            ( !sys_clock                ),   
-   .init           ( !pll_locked               ),
-
-   // cpu interface	
-	.dout           ( sdram_dout                ),	
-   .din            ( sdram_din                 ),
-   .addr           ( sdram_addr                ),
-   .we             ( sdram_wr                  ),
-   .rd         	 ( sdram_rd                  )	   
+sysram sysram 
+(
+  .clock  ( sys_clock        ),
+  .address( sdram_addr[15:0] ),  
+  .data   ( sdram_din        ),                       
+  .wren   ( sdram_wr         ),                       
+  .q      ( sdram_dout       )
 );
 */
 
