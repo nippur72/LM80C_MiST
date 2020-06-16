@@ -3,7 +3,7 @@
 // Antonino Porcino, nino.porcino@gmail.com
 //
 
-
+// TODO mist hardware reset button
 // TODO sdram (test out port)
 // TODO sprite bug
 // TODO bug volume 1,15:volume 2,15:volume 3,15:sound 3,200,200
