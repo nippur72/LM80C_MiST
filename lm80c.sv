@@ -5,7 +5,7 @@ module lm80c
 	
    // clocks
 	input sys_clock,		
-	input vdp_clock,
+	input vdp_ena,
 	input z80_ena,	
 	input psg_ena,
 		
@@ -191,13 +191,13 @@ vdp18_core
 
 vdp
 (
-	/*
 	.clk_i         ( sys_clock   ),
 	.clk_en_10m7_i ( vdp_ena     ),
-	*/
 	
+	/*
 	.clk_i         ( vdp_clock   ),
 	.clk_en_10m7_i ( 1           ),
+	*/
 
 	.reset_n_i     ( ~RESET      ),
 	
@@ -227,8 +227,8 @@ vdp
 
 vram vram
 (
-  .address( vram_a     ),
-  .clock  ( vdp_clock  ),
+  .clock  ( sys_clock  ),  
+  .address( vram_a     ),  
   .data   ( vram_din   ),                       
   .wren   ( vram_we    ),                       
   .q      ( vram_dout  )
@@ -245,22 +245,24 @@ reg [15:0] hcnt;
 reg [15:0] vcnt;
 reg flip = 0;
 
-always @(posedge vdp_clock) begin
-	if(RESET) begin
-		hcnt <= -36;
-		vcnt <= 0;
-	end
-	else begin
-		flip = ~flip;
-		if(flip) begin
-			hcnt <= hcnt + 1;
-			if(hcnt == 341+5) begin
-				hcnt <= 0;
-				vcnt <= vcnt + 1;
-				if(vcnt == 260) vcnt <= 0;
-			end
+always @(posedge sys_clock) begin
+	if(vdp_ena) begin	
+		if(RESET) begin
+			hcnt <= -36;
+			vcnt <= 0;
 		end
-	end	
+		else begin
+			flip = ~flip;
+			if(flip) begin
+				hcnt <= hcnt + 1;
+				if(hcnt == 341+5) begin
+					hcnt <= 0;
+					vcnt <= vcnt + 1;
+					if(vcnt == 260) vcnt <= 0;
+				end
+			end
+		end	
+	end
 end
 
 wire test_vs = 1 ? (vcnt < 4  ? 0 : 1) : vdp_hs;

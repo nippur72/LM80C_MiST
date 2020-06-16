@@ -63,19 +63,14 @@ module lm80c_mist
 /******************************************************************************************/
 
 wire pll_locked;
-wire sys_clock;      // cpu x 8 = 29491200
-wire sdram_clock;    // cpu x 8 with -2.5ns offset for the SDRAM module
-wire CLOCK;          // cpu = 3686400
-wire vdp_clock;      // cpu x 3 = 11059200 (closest integer multiple to 10738635)
-wire vdp_clock2x;    // vpd_clock x 2 = 22118400 for the scandoubler
+wire sys_clock;      // cpu x 3x2x2 = 44.236800 Mhz 
+wire CLOCK;          // cpu = 3.686400
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     
+
 	 .c0     ( sys_clock   ),     
-	 .c1     ( vdp_clock   ),     
-	 .c2     ( sdram_clock ),     
-	 .c3     ( vdp_clock2x ),
 	 .c4     ( CLOCK       )     
 );
 
@@ -85,14 +80,19 @@ pll pll (
 /******************************************************************************************/
 /******************************************************************************************/
 
-reg [3:0] cnt = 0;
+reg [1:0] cnt0 = 0;
+reg [4:0] cnt1 = 0;
 
 always @(posedge sys_clock) begin
-	cnt <= cnt + 1;	
+	cnt0 <= cnt0 + 1;	
+	cnt1 <= cnt1 + 1;	
+
+	if(cnt1 == 23) cnt1 <= 0;
 end
 
-wire z80_ena = cnt == 0 || cnt == 8;
-wire psg_ena = cnt == 0;
+wire vdp_ena = cnt0 == 0;                // divide by 4
+wire z80_ena = cnt1 == 0 || cnt1 == 12;  // divide by 12
+wire psg_ena = cnt1 == 0;                // divide by 24
 
 
 /******************************************************************************************/
@@ -145,7 +145,7 @@ lm80c lm80c
 	
    // clocks
 	.sys_clock ( sys_clock ),
-	.vdp_clock ( vdp_clock ),
+	.vdp_ena   ( vdp_ena   ),
 	.z80_ena   ( z80_ena   ),
 	.psg_ena   ( psg_ena   ),
 			
@@ -268,7 +268,7 @@ mist_video
 ) 
 mist_video
 (
-	.clk_sys(vdp_clock2x),       // twice the VDP clock for the scandoubler
+	.clk_sys(sys_clock),        // 4x the VDP clock for the scandoubler
 
 	// OSD SPI interface
    .SPI_DI(SPI_DI),
@@ -276,7 +276,7 @@ mist_video
    .SPI_SS3(SPI_SS3),
 
 	.scanlines(2'b00),           // scanlines (00-none 01-25% 10-50% 11-75%)	
-	.ce_divider(1),              // non-scandoubled pixel clock divider 0 - clk_sys/4, 1 - clk_sys/2
+	.ce_divider(0),              // non-scandoubled pixel clock divider 0 - clk_sys/4, 1 - clk_sys/2
 
 	.scandoubler_disable(1),     // 0 = HVSync 31KHz, 1 = CSync 15KHz	
 	.no_csync(no_csync),         // 1 = disable csync without scandoubler	
