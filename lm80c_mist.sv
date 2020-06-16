@@ -206,7 +206,7 @@ wire no_csync;
 user_io #
 (
 	.STRLEN(conf_str_len),
-	.PS2DIV(14)              // ps2 clock divider: CLOCK / 24 must be approx = 15 Khz
+	.PS2DIV(14)              // ps2 clock divider: CLOCK / 14 must be approx = 15 Khz
 )
 user_io ( 
 	.conf_str   ( conf_str   ),
