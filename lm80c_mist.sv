@@ -357,13 +357,15 @@ eraser eraser(
 /******************************************************************************************/
 							
 assign SDRAM_CKE = pll_locked; // was: 1'b1 in lesson4/soc.v
-assign SDRAM_CLK = sdram_clock;
+assign SDRAM_CLK = ~sys_clock; // sdram_clock;
 
 wire [24:0] sdram_addr   ;
 wire        sdram_wr     ;
 wire        sdram_rd     ;
 wire [7:0]  sdram_dout   ; 
 wire [7:0]  sdram_din    ; 
+
+wire [7:0]  true_sdram_dout ; 
 
 always @(*) begin
 	if(is_downloading && download_wr) begin
@@ -427,10 +429,9 @@ sdram sdram
    .addr           ( sdram_addr                ),
    .we             ( sdram_wr                  ),
    .oe         	 ( 1 /*sdram_rd*/            ),	
-   .dout           ( sdram_dout                )	
+   .dout           ( true_sdram_dout                )	
 );
 
-/*
 sysram sysram 
 (
   .clock  ( sys_clock        ),
@@ -439,7 +440,6 @@ sysram sysram
   .wren   ( sdram_wr         ),                       
   .q      ( sdram_dout       )
 );
-*/
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -495,6 +495,7 @@ always @(posedge CLOCK) begin
 		debug         <= 0;
 	end
 	else begin
+		
 		if(!debug_done) begin
 			debugger_busy <= 1;
 			debug_addr    <= debug_addr + 1;
@@ -510,8 +511,10 @@ always @(posedge CLOCK) begin
 				debug_done <= 1;
 			end
 			
-			if(debug_counter == 4) debug <= 1;					
+			//if(debug_counter == 4) debug <= 1;					
 		end
+		
+		debug <= sdram_dout != true_sdram_dout;
 	end
 end
 
