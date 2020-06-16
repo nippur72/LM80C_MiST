@@ -6,7 +6,6 @@ module lm80c
    // clocks
 	input sys_clock,
 	input vdp_clock,
-	input CLOCK,
 		
 	// video
 	output [5:0] R,
@@ -346,8 +345,8 @@ wire INT_n;
 
 z80ctc_top z80ctc_top
 (
-	.clock     ( CLOCK      ),
-	.clock_ena ( 1          ),
+	.clock     ( sys_clock  ),
+	.clock_ena ( z80_ena    ),
 	.reset     ( RESET      ),
 	.din       ( cpu_dout   ),
 	.dout      ( ctc_dout   ),

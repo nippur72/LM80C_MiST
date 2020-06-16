@@ -131,7 +131,6 @@ lm80c lm80c
    // clocks
 	.sys_clock ( sys_clock ),
 	.vdp_clock ( vdp_clock ),
-	.CLOCK     ( CLOCK     ),
 			
 	// video
 	.R  ( R  ),
