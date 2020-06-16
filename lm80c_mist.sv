@@ -492,25 +492,22 @@ dac #(.C_bits(8)) dac_R
 /******************************************************************************************/
 /******************************************************************************************/
 
-
 reg        debugger_busy;
 wire       debug_done;
+reg  [7:0] debug_counter;
+
+reg [15:0] debug_addr;
 wire [7:0] debug_data_rd;
 reg  [7:0] debug_data_wr;
-reg [15:0] debug_addr;
 reg        debug_wr;
 
-reg  [7:0] debug_counter;
-reg  [7:0] debug_ok;
-
-wire debug = debug_count != 0;
+reg debug;
 
 assign LED = ~debug;
 
-/*
 // debugs that ROM is loaded correctly (first 4 bytes checked)
-always @(posedge sys_clock) begin
-	if(!RESET) begin
+always @(posedge CLOCK) begin
+	if(RESET) begin
 		debugger_busy <= 0;	
 		debug_addr    <= 'hffff;
 		debug_counter <= 0;
@@ -518,29 +515,25 @@ always @(posedge sys_clock) begin
 		debug         <= 0;
 	end
 	else begin
-		if(z80_ena) begin
-			if(!debug_done) begin
-				debugger_busy <= 1;
-				debug_addr    <= debug_addr + 1;
-				debug_wr      <= 0;
-				
-				if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
-				if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
-				if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
-				if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
+		if(!debug_done) begin
+			debugger_busy <= 1;
+			debug_addr    <= debug_addr + 1;
+			debug_wr      <= 0;			
+			
+			if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
+			if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
+			if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
+			if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
 
-				if(debug_addr == 4) begin
-					debugger_busy <= 0;
-					debug_done <= 1;
-				end
-				
-				if(debug_counter == 4) debug <= 1;					
+			if(debug_addr == 4) begin
+				debugger_busy <= 0;
+				debug_done <= 1;
 			end
 			
+			if(debug_counter == 4) debug <= 1;					
 		end
 	end
 end
-*/
 
 /*
 // simulate a fictional LED peripheral
@@ -567,28 +560,6 @@ always @(posedge sys_clock) begin
 		
 		if(LED_SEL && WR) begin
 			LED_latch <= cpu_dout;			
-		end
-	end
-end
-*/
-
-/******************************************************************************************/
-/******************************************************************************************/
-/***************************************** @debug *****************************************/
-/******************************************************************************************/
-/******************************************************************************************/
-
-// wire [15:0] debug_count;
-
-wire [31:0] debug_count;
-wire [31:0] debug_min_addr;
-wire [31:0] debug_max_addr;
-
-/*
-always @(posedge sys_clock) begin
-	if(z80_ena) begin
-		if(LED_SEL && WR) begin
-			debug_count[A[3:0]] <= cpu_dout;
 		end
 	end
 end
