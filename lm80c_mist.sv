@@ -89,10 +89,10 @@ pll pll (
 // RESET goes into: t80a, vdp, psg, ctc
 
 // reset while booting or when the physical reset key is pressed
-wire RESET = ~boot_completed | reset_key | eraser_busy; 
+wire RESET = ~ROM_loaded | reset_key | eraser_busy; 
 
 // stops the cpu when booting, downloading or erasing
-wire WAIT = ~boot_completed | is_downloading | eraser_busy | debugger_busy;
+wire WAIT = ~ROM_loaded | is_downloading | (debugger_busy | ~debug_done);
 
 
 /******************************************************************************************/
@@ -295,7 +295,7 @@ wire        is_downloading;
 wire [24:0] download_addr;
 wire [7:0]  download_data;
 wire        download_wr;
-wire        boot_completed;
+wire        ROM_loaded;
 
 wire [23:0] ioctl_fileext;
 wire [31:0] ioctl_filesize;      	
@@ -319,7 +319,7 @@ downloader (
 	
 	// signal indicating an active rom download
 	.downloading ( is_downloading  ),
-   .ROM_done    ( boot_completed  ),	
+   .ROM_done    ( ROM_loaded      ),	
 	         
    // external ram interface
    .clk   ( CLOCK         ),
