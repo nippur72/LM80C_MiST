@@ -64,8 +64,9 @@ module lm80c_mist
 
 wire pll_locked;
 wire sys_clock;      // cpu x 8 = 29491200
-wire vdp_clock;      // cpu x 3 = 11059200 (closest integer multiple to 10738635)
+wire sdram_clock;    // cpu x 8 with -2.5ns offset for the SDRAM module
 wire CLOCK;          // cpu = 3686400
+wire vdp_clock;      // cpu x 3 = 11059200 (closest integer multiple to 10738635)
 wire vdp_clock2x;    // vpd_clock x 2 = 22118400 for the scandoubler
 
 pll pll (
@@ -73,8 +74,9 @@ pll pll (
 	 .locked ( pll_locked  ),     
 	 .c0     ( sys_clock   ),     
 	 .c1     ( vdp_clock   ),     
-	 .c2     ( CLOCK       ),     
-	 .c3     ( vdp_clock2x ) 
+	 .c2     ( sdram_clock ),     
+	 .c3     ( vdp_clock2x ),
+	 .c4     ( CLOCK       )     
 );
 
 
