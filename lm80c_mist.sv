@@ -63,16 +63,19 @@ module lm80c_mist
 /******************************************************************************************/
 
 wire pll_locked;
-wire sys_clock;      // cpu x 3x2x2 = 44.236800 Mhz 
+wire sys_clock;      // cpu x 8
+wire sdram_clock;    // cpu x 8 -90°
+wire vdp_clock;      // cpu x 6 (VDP x 2)
+
 wire CLOCK;          // cpu = 3.686400
-wire sdram_clock;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     
 
 	 .c0     ( sys_clock   ),     
-	 .c1     ( sdram_clock )	 
+	 .c1     ( sdram_clock ),
+	 .c2     ( vdp_clock   )
 );
 
 /******************************************************************************************/
@@ -81,43 +84,38 @@ pll pll (
 /******************************************************************************************/
 /******************************************************************************************/
 
-reg [1:0] cnt0 = 0;
-reg [4:0] cnt1 = 0;
+reg cnt_vdp = 0;
+always @(posedge vdp_clock) begin
+	if(!pll_locked) cnt_vdp <= 0;
+	else          	 cnt_vdp <= cnt_vdp + 1;
+end 
+wire vdp_ena = cnt_vdp == 0;                   // vdp_clock divided by 2
 
-always @(posedge sys_clock) begin
-	cnt0 <= cnt0 + 1;	
-	cnt1 <= cnt1 + 1;	
 
-	if(cnt1 == 23) cnt1 <= 0;
+reg [3:0] cnt_cpu = 0;
+always @(posedge sys_clock) begin	
+	if(!pll_locked) cnt_cpu <= 0;
+	else            cnt_cpu <= cnt_cpu + 1;	
 end
 
-wire vdp_ena = cnt0 == 0;                // divide by 4
-wire z80_ena = cnt1 == 0 || cnt1 == 12;  // divide by 12
-wire psg_ena = cnt1 == 0;                // divide by 24
+wire z80_ena = cnt_cpu == 0 || cnt_cpu == 8;   // sys_clock divided by 8
+wire psg_ena = cnt_cpu == 0;                   // sys_clock divided by 16
 
 assign CLOCK =
-   (cnt1 ==  0 || cnt1 == 12) ? 1 :
-	(cnt1 ==  1 || cnt1 == 13) ? 1 :
-	(cnt1 ==  2 || cnt1 == 14) ? 1 :
-	(cnt1 ==  3 || cnt1 == 15) ? 1 :
-	(cnt1 ==  4 || cnt1 == 16) ? 1 :
-	(cnt1 ==  5 || cnt1 == 17) ? 1 : 0;
-
+   (cnt_cpu ==  0 || cnt_cpu ==  8) ? 1 :
+	(cnt_cpu ==  1 || cnt_cpu ==  9) ? 1 :
+	(cnt_cpu ==  2 || cnt_cpu == 10) ? 1 :
+	(cnt_cpu ==  3 || cnt_cpu == 12) ? 1 : 0;
 
 wire [2:0] sdram_q =
-	(cnt1 ==  0 || cnt1 == 12) ? 0 :
-	(cnt1 ==  1 || cnt1 == 13) ? 1 :
-	(cnt1 ==  2 || cnt1 == 14) ? 2 :
-	(cnt1 ==  3 || cnt1 == 15) ? 3 :
-	(cnt1 ==  4 || cnt1 == 16) ? 4 :
-	(cnt1 ==  5 || cnt1 == 17) ? 5 :
-	(cnt1 ==  6 || cnt1 == 18) ? 6 :
-	(cnt1 ==  7 || cnt1 == 19) ? 7 :
-	(cnt1 ==  8 || cnt1 == 20) ? 0 :
-	(cnt1 ==  9 || cnt1 == 21) ? 0 :
-	(cnt1 == 10 || cnt1 == 22) ? 0 :
-	(cnt1 == 11 || cnt1 == 23) ? 0 : 0;
-
+	(cnt_cpu ==  0 || cnt_cpu ==  8) ? 0 :
+	(cnt_cpu ==  1 || cnt_cpu ==  9) ? 1 :
+	(cnt_cpu ==  2 || cnt_cpu == 10) ? 2 :
+	(cnt_cpu ==  3 || cnt_cpu == 11) ? 3 :
+	(cnt_cpu ==  4 || cnt_cpu == 12) ? 4 :
+	(cnt_cpu ==  5 || cnt_cpu == 13) ? 5 :
+	(cnt_cpu ==  6 || cnt_cpu == 14) ? 6 :
+	(cnt_cpu ==  7 || cnt_cpu == 15) ? 7 : 0;
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -169,6 +167,8 @@ lm80c lm80c
 	
    // clocks
 	.sys_clock ( sys_clock ),
+	.vdp_clock ( vdp_clock ),
+	
 	.vdp_ena   ( vdp_ena   ),
 	.z80_ena   ( z80_ena   ),
 	.psg_ena   ( psg_ena   ),
@@ -299,7 +299,7 @@ mist_video
 ) 
 mist_video
 (
-	.clk_sys(sys_clock),        // 4x the VDP clock for the scandoubler
+	.clk_sys(vdp_clock),        // 2x the VDP clock for the scandoubler
 
 	// OSD SPI interface
    .SPI_DI(SPI_DI),
@@ -307,7 +307,7 @@ mist_video
    .SPI_SS3(SPI_SS3),
 
 	.scanlines(2'b00),           // scanlines (00-none 01-25% 10-50% 11-75%)	
-	.ce_divider(0),              // non-scandoubled pixel clock divider 0 - clk_sys/4, 1 - clk_sys/2
+	.ce_divider(1),              // non-scandoubled pixel clock divider 0 - clk_sys/4, 1 - clk_sys/2
 
 	.scandoubler_disable(1),     // 0 = HVSync 31KHz, 1 = CSync 15KHz	
 	.no_csync(no_csync),         // 1 = disable csync without scandoubler	

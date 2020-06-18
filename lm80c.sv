@@ -5,6 +5,8 @@ module lm80c
 	
    // clocks
 	input sys_clock,		
+	input vdp_clock,	
+	
 	input vdp_ena,
 	input z80_ena,	
 	input psg_ena,
@@ -198,14 +200,9 @@ vdp18_core
 
 vdp
 (
-	.clk_i         ( sys_clock   ),
+	.clk_i         ( vdp_clock   ),
 	.clk_en_10m7_i ( vdp_ena     ),
 	
-	/*
-	.clk_i         ( vdp_clock   ),
-	.clk_en_10m7_i ( 1           ),
-	*/
-
 	.reset_n_i     ( ~RESET      ),
 	
    .csr_n_i       ( CSR         ),
@@ -234,7 +231,7 @@ vdp
 
 vram vram
 (
-  .clock  ( sys_clock  ),  
+  .clock  ( vdp_clock  ),  
   .address( vram_a     ),  
   .data   ( vram_din   ),                       
   .wren   ( vram_we    ),                       
@@ -252,7 +249,7 @@ reg [15:0] hcnt;
 reg [15:0] vcnt;
 reg flip = 0;
 
-always @(posedge sys_clock) begin
+always @(posedge vdp_clock) begin
 	if(vdp_ena) begin	
 		if(RESET) begin
 			hcnt <= -36;
