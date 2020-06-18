@@ -72,8 +72,7 @@ pll pll (
 	 .locked ( pll_locked  ),     
 
 	 .c0     ( sys_clock   ),     
-	 .c1     ( sdram_clock ),
-	 //.c4     ( CLOCK       )     
+	 .c1     ( sdram_clock )	 
 );
 
 /******************************************************************************************/
@@ -96,16 +95,16 @@ wire vdp_ena = cnt0 == 0;                // divide by 4
 wire z80_ena = cnt1 == 0 || cnt1 == 12;  // divide by 12
 wire psg_ena = cnt1 == 0;                // divide by 24
 
-assign CLOCK = 	
+assign CLOCK =
    (cnt1 ==  0 || cnt1 == 12) ? 1 :
 	(cnt1 ==  1 || cnt1 == 13) ? 1 :
 	(cnt1 ==  2 || cnt1 == 14) ? 1 :
 	(cnt1 ==  3 || cnt1 == 15) ? 1 :
 	(cnt1 ==  4 || cnt1 == 16) ? 1 :
-	(cnt1 ==  5 || cnt1 == 17) ? 1 : 0; 
+	(cnt1 ==  5 || cnt1 == 17) ? 1 : 0;
 
 
-wire [2:0] sdram_q = 
+wire [2:0] sdram_q =
 	(cnt1 ==  0 || cnt1 == 12) ? 0 :
 	(cnt1 ==  1 || cnt1 == 13) ? 1 :
 	(cnt1 ==  2 || cnt1 == 14) ? 2 :
@@ -117,8 +116,8 @@ wire [2:0] sdram_q =
 	(cnt1 ==  8 || cnt1 == 20) ? 0 :
 	(cnt1 ==  9 || cnt1 == 21) ? 0 :
 	(cnt1 == 10 || cnt1 == 22) ? 0 :
-	(cnt1 == 11 || cnt1 == 23) ? 0 : 0; 
-	
+	(cnt1 == 11 || cnt1 == 23) ? 0 : 0;
+
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -453,8 +452,6 @@ end
 // - timing constraints in .sdc file
 // - can't be accessed before it's initialized ("initialized" pin)
 
-wire sdram_initialized;
-
 sdram sdram 
 (
 	// interface to the MT48LC16M16 chip
@@ -479,7 +476,7 @@ sdram sdram
    .addr           ( x_sdram_addr              ),
    .we             ( x_sdram_wr                ),
    .oe         	 ( 1 /*sdram_rd*/            ),	
-   .dout           ( x_sdram_dout                )	
+   .dout           ( x_sdram_dout              )	
 );
 
 wire [15:0] x_sdram_addr;
@@ -487,7 +484,6 @@ wire [7:0]  x_sdram_din;
 wire [7:0]  x_sdram_dout;
 wire        x_sdram_rd;
 wire        x_sdram_wr;
-
 
 sysram sysram 
 (
@@ -497,6 +493,7 @@ sysram sysram
   .wren   ( sdram_wr         ),                       
   .q      ( sdram_dout       )
 );
+
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -552,29 +549,33 @@ always @(posedge sys_clock) begin
 		debug         <= 0;
 	end
 	else begin
-		/*
-		if(!debug_done) begin
-			debugger_busy <= 1;
-			debug_addr    <= debug_addr + 1;
-			debug_wr      <= 0;			
-			
-			if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
-			if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
-			if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
-			if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
+		if(z80_ena) begin
+			if(!debug_done) begin
+				debugger_busy <= 1;
+				debug_addr    <= debug_addr + 1;
+				debug_wr      <= 0;			
+				
+				if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
+				if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
+				if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
+				if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
 
-			if(debug_addr == 4) begin
-				debugger_busy <= 0;
-				debug_done <= 1;
+				if(debug_addr == 4) begin
+					debugger_busy <= 0;
+					debug_done <= 1;
+				end
+				
+				if(debug_counter == 4) debug <= 1;
+									
 			end
-			
-			//if(debug_counter == 4) debug <= 1;					
 		end
-		*/
+		
+		/*
 		if(z80_ena) begin
 			debug_done <= 1;
 			debug <= sdram_dout != true_sdram_dout;
 		end 
+		*/
 	end
 end
 

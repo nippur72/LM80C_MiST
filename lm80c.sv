@@ -393,9 +393,8 @@ always @(posedge sys_clock) begin
 				if(RD) begin
 					x_sdram_wr  <= 0;					
 				end				
-			end
-			
-		end		
+			end			
+		end
 	end
 end
 
