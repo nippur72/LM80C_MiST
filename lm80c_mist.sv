@@ -65,12 +65,14 @@ module lm80c_mist
 wire pll_locked;
 wire sys_clock;      // cpu x 3x2x2 = 44.236800 Mhz 
 wire CLOCK;          // cpu = 3.686400
+wire sdram_clock;
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
 	 .locked ( pll_locked  ),     
 
 	 .c0     ( sys_clock   ),     
+	 .c1     ( sdram_clock ),
 	 .c4     ( CLOCK       )     
 );
 
@@ -94,6 +96,20 @@ wire vdp_ena = cnt0 == 0;                // divide by 4
 wire z80_ena = cnt1 == 0 || cnt1 == 12;  // divide by 12
 wire psg_ena = cnt1 == 0;                // divide by 24
 
+wire [2:0] sdram_q = 
+	(cnt1 ==  0 || cnt1 == 12) ? 0 :
+	(cnt1 ==  1 || cnt1 == 13) ? 1 :
+	(cnt1 ==  2 || cnt1 == 14) ? 2 :
+	(cnt1 ==  3 || cnt1 == 15) ? 3 :
+	(cnt1 ==  4 || cnt1 == 16) ? 4 :
+	(cnt1 ==  5 || cnt1 == 17) ? 5 :
+	(cnt1 ==  6 || cnt1 == 18) ? 6 :
+	(cnt1 ==  7 || cnt1 == 19) ? 7 :
+	(cnt1 ==  8 || cnt1 == 20) ? 0 :
+	(cnt1 ==  9 || cnt1 == 21) ? 0 :
+	(cnt1 == 10 || cnt1 == 22) ? 0 :
+	(cnt1 == 11 || cnt1 == 23) ? 0 : 0; 
+	
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -168,7 +184,14 @@ lm80c lm80c
 	.ram_dout ( ram_dout   ),	
 	.ram_din  ( sdram_dout ),
 	.ram_rd   ( ram_rd     ),
-	.ram_wr   ( ram_wr     )
+	.ram_wr   ( ram_wr     ),
+	
+	.x_sdram_addr(x_sdram_addr),
+	.x_sdram_din(x_sdram_din),
+	.x_sdram_dout(x_sdram_dout),
+	.x_sdram_rd(x_sdram_rd),
+	.x_sdram_wr(x_sdram_wr)
+	
 );
 
 
@@ -357,8 +380,8 @@ wire [24:0] eraser_addr;
 wire [7:0]  eraser_data;
 
 eraser eraser(
-	.clk      ( CLOCK       ),
-	.ena      ( 1           ),
+	.clk      ( sys_clock   ),
+	.ena      ( z80_ena     ),
 	.trigger  ( st_reset    ),	
 	.erasing  ( eraser_busy ),
 	.wr       ( eraser_wr   ),
@@ -373,8 +396,8 @@ eraser eraser(
 /******************************************************************************************/
 /******************************************************************************************/
 							
-assign SDRAM_CKE = pll_locked; // was: 1'b1 in lesson4/soc.v
-assign SDRAM_CLK = ~sys_clock; // sdram_clock;
+assign SDRAM_CKE = 1; // pll_locked; // was: 1'b1 in lesson4/soc.v
+assign SDRAM_CLK = sdram_clock;
 
 wire [24:0] sdram_addr   ;
 wire        sdram_wr     ;
@@ -439,15 +462,23 @@ sdram sdram
    .clk            ( sys_clock                 ),
    .clkref         ( CLOCK                     ),
    .init           ( !pll_locked               ),
-	//.initialized    ( sdram_initialized         ),
+	
+	.q( sdram_q ),
 
    // cpu interface	
-   .din            ( sdram_din                 ),
-   .addr           ( sdram_addr                ),
-   .we             ( sdram_wr                  ),
+   .din            ( x_sdram_din               ),
+   .addr           ( x_sdram_addr              ),
+   .we             ( x_sdram_wr                ),
    .oe         	 ( 1 /*sdram_rd*/            ),	
-   .dout           ( true_sdram_dout                )	
+   .dout           ( x_sdram_dout                )	
 );
+
+wire [15:0] x_sdram_addr;
+wire [7:0]  x_sdram_din;
+wire [7:0]  x_sdram_dout;
+wire        x_sdram_rd;
+wire        x_sdram_wr;
+
 
 sysram sysram 
 (

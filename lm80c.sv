@@ -28,7 +28,14 @@ module lm80c
 	output  [7:0] ram_dout,
 	input   [7:0] ram_din,
 	output        ram_rd,
-	output        ram_wr	
+	output        ram_wr,	
+
+	// sdram test interface
+	output reg [15:0] x_sdram_addr,
+	output reg  [7:0] x_sdram_din,
+	input       [7:0] x_sdram_dout,
+	output            x_sdram_rd,
+	output            x_sdram_wr	
 );
 
 assign ram_addr = A;
@@ -372,7 +379,29 @@ z80ctc_top z80ctc_top
 /******************************************************************************************/
 /******************************************************************************************/
 
-wire [7:0] led_dout = 33;			
+
+always @(posedge sys_clock) begin
+	if(z80_ena) begin
+		if(LED_SEL) begin
+			if(WR && A[7:0] == 200) begin x_sdram_wr  <= 0;	x_sdram_addr[ 7:0] <= cpu_dout; end
+			if(WR && A[7:0] == 201) begin x_sdram_wr  <= 0;	x_sdram_addr[15:8] <= cpu_dout; end
+			if(A[7:0] == 202) begin
+				if(WR) begin
+					x_sdram_din <= cpu_dout;			
+					x_sdram_wr  <= 1;
+				end 
+				if(RD) begin
+					x_sdram_wr  <= 0;					
+				end				
+			end
+			
+		end		
+	end
+end
+
+wire [7:0] led_dout = (RD && A[7:0] == 200) ? x_sdram_addr[ 7:0] :
+			             (RD && A[7:0] == 201) ? x_sdram_addr[15:8] :
+							 (RD && A[7:0] == 202) ? x_sdram_dout       : 'hfe;			
 
 endmodule
 
