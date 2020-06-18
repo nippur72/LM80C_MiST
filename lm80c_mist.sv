@@ -73,7 +73,7 @@ pll pll (
 
 	 .c0     ( sys_clock   ),     
 	 .c1     ( sdram_clock ),
-	 .c4     ( CLOCK       )     
+	 //.c4     ( CLOCK       )     
 );
 
 /******************************************************************************************/
@@ -95,6 +95,15 @@ end
 wire vdp_ena = cnt0 == 0;                // divide by 4
 wire z80_ena = cnt1 == 0 || cnt1 == 12;  // divide by 12
 wire psg_ena = cnt1 == 0;                // divide by 24
+
+assign CLOCK = 	
+   (cnt1 ==  0 || cnt1 == 12) ? 1 :
+	(cnt1 ==  1 || cnt1 == 13) ? 1 :
+	(cnt1 ==  2 || cnt1 == 14) ? 1 :
+	(cnt1 ==  3 || cnt1 == 15) ? 1 :
+	(cnt1 ==  4 || cnt1 == 16) ? 1 :
+	(cnt1 ==  5 || cnt1 == 17) ? 1 : 0; 
+
 
 wire [2:0] sdram_q = 
 	(cnt1 ==  0 || cnt1 == 12) ? 0 :
