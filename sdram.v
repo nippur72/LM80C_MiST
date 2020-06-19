@@ -35,7 +35,7 @@ module sdram (
 	// cpu/chipset interface
 	input 		 		init,			// init signal after FPGA config to initialize RAM
 	input 		 		clk,			// sdram is accessed at up to 128MHz
-	input					clkref,		// reference clock to sync to	
+	input					clkref,		// reference clock to sync to
 	
 	input [7:0]  		din,			// data input from chipset/cpu
 	output [7:0]      dout,			// data output to chipset/cpu
@@ -73,7 +73,6 @@ always @(posedge clk) begin
       ((q != 7) && (q != 0)))
 			q <= q + 3'd1;
 end
-
 
 // ---------------------------------------------------------------------
 // --------------------------- startup/reset ---------------------------

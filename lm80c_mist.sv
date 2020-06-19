@@ -3,24 +3,24 @@
 // Antonino Porcino, nino.porcino@gmail.com
 //
 
-// TODO mist hardware reset button
-// TODO sdram (test out port)
+// TODO fix hardware reset switch
 // TODO sprite bug
 // TODO bug volume 1,15:volume 2,15:volume 3,15:sound 3,200,200
 // TODO italian keyboard
 // TODO sio, pio dummy modules
 // TODO color problem (check pixel to pixel, vsync>200?)
 // TODO async VDP design
+// TODO understand dowloader/data_io need for CLOCK
+// TODO osd bug menu size with clk x 4
 
 
 // top level module
-								   
-module lm80c_mist
-( 
-   input [1:0] 	CLOCK_27,      // 27 MHz board clock 
+									  
+module lm80c_mist ( 
+   input [1:0] 	CLOCK_27,
 	
 	// SDRAM interface
-	inout  [15:0] 	SDRAM_DQ, 		// SDRAM Data bus 16 Bits
+	inout [15:0]  	SDRAM_DQ, 		// SDRAM Data bus 16 Bits
 	output [12:0] 	SDRAM_A, 		// SDRAM Address bus 13 Bits
 	output        	SDRAM_DQML, 	// SDRAM Low-byte Data Mask
 	output        	SDRAM_DQMH, 	// SDRAM High-byte Data Mask
@@ -32,7 +32,7 @@ module lm80c_mist
 	output 			SDRAM_CLK, 		// SDRAM Clock
 	output        	SDRAM_CKE, 		// SDRAM Clock Enable
   
-   // SPI (serial-parallel) interface to ARM io controller
+   // SPI interface to arm io controller
    output      	SPI_DO,
 	input       	SPI_DI,
    input       	SPI_SCK,
@@ -52,7 +52,7 @@ module lm80c_mist
 	output         LED,
 	input          UART_RX,
 	output         AUDIO_L,
-	output         AUDIO_R
+	output         AUDIO_R	
 );
 
 /******************************************************************************************/
@@ -62,17 +62,16 @@ module lm80c_mist
 /******************************************************************************************/
 
 wire pll_locked;
-wire sys_clock;      // cpu x 8
-wire sdram_clock;    // cpu x 8 -90Â°
-wire vdp_clock;      // VDP x 2
+wire vdp_clock;
+wire sys_clock;
 
 pll pll (
-	 .inclk0 ( CLOCK_27[0] ),
-	 .locked ( pll_locked  ),     
-
-	 .c0     ( sys_clock   ),     
-	 .c1     ( sdram_clock ),
-	 .c2     ( vdp_clock   )	 
+	 .inclk0 ( CLOCK_27[0]   ),
+	 .locked ( pll_locked    ),        
+	 
+	 .c0     ( vdp_clock     ),        
+	 .c1     ( sys_clock     ),        
+	 .c2     ( SDRAM_CLK     )         
 );
 
 /******************************************************************************************/
@@ -81,21 +80,24 @@ pll pll (
 /******************************************************************************************/
 /******************************************************************************************/
 
-reg cnt_vdp = 0;
-always @(posedge vdp_clock) begin
-	if(!pll_locked) cnt_vdp <= 0;
-	else          	 cnt_vdp <= cnt_vdp + 1;
-end 
-wire vdp_ena = cnt_vdp == 0;                   // vdp_clock divided by 2
+// vdp
 
-reg [2:0] cnt_cpu = 0;
-always @(posedge sys_clock) begin	
-	if(!pll_locked) cnt_cpu <= 0;
-	else            cnt_cpu <= cnt_cpu + 1;	
-end
+reg cnt_vdp;
+always @(posedge vdp_clock)
+	cnt_vdp <= cnt_vdp + 1;
+	
+wire vdp_ena = cnt_vdp == 0;
 
-wire z80_ena = cnt_cpu == 0;   // 
-wire psg_ena = cnt_cpu == 0;   // 
+// cpu
+
+wire cpu_clock = clk_div[2];
+reg [3:0] clk_div;
+always @(posedge sys_clock)
+	clk_div <= clk_div + 3'd1;
+
+wire z80_ena = clk_div == 0 || clk_div == 8;
+wire psg_ena = clk_div == 0;   
+
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -109,7 +111,7 @@ wire psg_ena = cnt_cpu == 0;   //
 wire RESET = ~ROM_loaded | reset_key | eraser_busy; 
 
 // stops the cpu when booting, downloading or erasing
-wire WAIT = ~ROM_loaded | is_downloading | (debugger_busy | ~debug_done);
+wire WAIT = ~ROM_loaded | is_downloading;
 
 
 /******************************************************************************************/
@@ -133,26 +135,25 @@ wire [7:0] CHANNEL_R;
 wire [7:0] row_select;
 wire [7:0] column_bits;
 
-// ram
-wire [15:0] ram_addr;
-wire [7:0]  ram_din;
-wire [7:0]  ram_dout;
-wire        ram_rd;
-wire        ram_wr;	
+// ram interface
+wire [15:0] cpu_addr;
+wire [7:0]  cpu_dout;
+wire        cpu_rd;
+wire        cpu_wr;
 
 lm80c lm80c
-(	
-	.RESET ( RESET ),
-	.WAIT  ( WAIT  ),
+(
+	.RESET(RESET),
+	.WAIT(WAIT),
 	
    // clocks
-	.sys_clock ( sys_clock ),
-	.vdp_clock ( vdp_clock ),
+	.sys_clock(sys_clock),		
+	.vdp_clock(vdp_clock),	
 	
-	.vdp_ena   ( vdp_ena   ),
-	.z80_ena   ( z80_ena   ),
-	.psg_ena   ( psg_ena   ),
-			
+	.vdp_ena(vdp_ena),
+	.z80_ena(z80_ena),	
+	.psg_ena(psg_ena),
+		
 	// video
 	.R  ( R  ),
 	.G  ( G  ),
@@ -161,25 +162,18 @@ lm80c lm80c
 	.VS ( VS ),
 	
 	// audio
-	.CHANNEL_L( CHANNEL_L ),
-   .CHANNEL_R( CHANNEL_R ), 
+	.CHANNEL_L(CHANNEL_L), 
+   .CHANNEL_R(CHANNEL_R), 
 	
-	// keyboard
-	.KM(KM),	
+	// keyboard	
+	.KM(KM),
 	
 	// RAM interface
-	.ram_addr ( ram_addr   ),
-	.ram_din  ( ram_din    ),	
-	.ram_dout ( sdram_dout ),
-	.ram_rd   ( ram_rd     ),
-	.ram_wr   ( ram_wr     ),
-	
-	.x_sdram_addr(x_sdram_addr),
-	.x_sdram_din(x_sdram_din),
-	.x_sdram_dout(x_sdram_dout),
-	.x_sdram_rd(x_sdram_rd),
-	.x_sdram_wr(x_sdram_wr)
-	
+	.ram_addr (cpu_addr),
+	.ram_din  (cpu_dout),
+	.ram_dout (sdram_dout),
+	.ram_rd   (cpu_rd),
+	.ram_wr   (cpu_wr)
 );
 
 
@@ -224,8 +218,8 @@ localparam conf_str_len = $size(conf_str)>>3;
 
 wire [7:0] status;       // the status register is controlled by the user_io module
 
-wire st_power_on = status[0];
-wire st_reset    = status[3];
+wire st_reset_switch = status[0];
+wire st_menu_reset   = status[3];
 
 wire scandoubler_disable;
 wire ypbpr;
@@ -248,7 +242,7 @@ user_io (
 	.ypbpr               ( ypbpr               ),
 	.no_csync            ( no_csync            ),
 	
-	.status     ( status     ),
+	.status     ( status    ),
 	
 	.clk_sys    ( sys_clock ),
 	.clk_sd     ( sys_clock ),       // sd card clock
@@ -265,7 +259,6 @@ user_io (
 wire        img_mounted; // rising edge if a new image is mounted
 wire [31:0] img_size;    // size of image in bytes
 
-
 /******************************************************************************************/
 /******************************************************************************************/
 /***************************************** @mist_video ************************************/
@@ -279,7 +272,7 @@ mist_video
 ) 
 mist_video
 (
-	.clk_sys(vdp_clock),        // 2x the VDP clock for the scandoubler
+	.clk_sys(vdp_clock),       // 2x the VDP clock for the scandoubler
 
 	// OSD SPI interface
    .SPI_DI(SPI_DI),
@@ -311,7 +304,6 @@ mist_video
 	.VGA_HS(VGA_HS)
 );
 
-		
 /******************************************************************************************/
 /******************************************************************************************/
 /***************************************** @downloader ************************************/
@@ -323,9 +315,6 @@ wire [24:0] download_addr;
 wire [7:0]  download_data;
 wire        download_wr;
 wire        ROM_loaded;
-
-wire [23:0] ioctl_fileext;
-wire [31:0] ioctl_filesize;      	
 
 // ROM download helper
 downloader 
@@ -349,8 +338,8 @@ downloader (
    .ROM_done    ( ROM_loaded      ),	
 	         
    // external ram interface
-   .clk     ( sys_clock     ),
-	.clk_ena ( z80_ena       ),
+   .clk     ( cpu_clock     ),
+	.clk_ena ( 1             ),
    .wr      ( download_wr   ),
    .addr    ( download_addr ),
    .data    ( download_data )	
@@ -369,13 +358,13 @@ wire [24:0] eraser_addr;
 wire [7:0]  eraser_data;
 
 eraser eraser(
-	.clk      ( sys_clock   ),
-	.ena      ( z80_ena     ),
-	.trigger  ( st_reset    ),	
-	.erasing  ( eraser_busy ),
-	.wr       ( eraser_wr   ),
-	.addr     ( eraser_addr ),
-	.data     ( eraser_data )
+	.clk      ( sys_clock     ),
+	.ena      ( z80_ena       ),
+	.trigger  ( st_menu_reset | st_reset_switch ),	
+	.erasing  ( eraser_busy   ),
+	.wr       ( eraser_wr     ),
+	.addr     ( eraser_addr   ),
+	.data     ( eraser_data   )
 );
 
 
@@ -384,55 +373,40 @@ eraser eraser(
 /***************************************** @sdram *****************************************/
 /******************************************************************************************/
 /******************************************************************************************/
-							
-assign SDRAM_CKE = 1; // pll_locked; // was: 1'b1 in lesson4/soc.v
-assign SDRAM_CLK = ~sdram_clock;
+			
+// SDRAM control signals
+assign SDRAM_CKE = 1'b1;
 
-reg  [24:0] sdram_addr;
-reg         sdram_wr  ;
-reg         sdram_rd  ;
-reg  [7:0]  sdram_din ; 
-wire [7:0]  sdram_dout; 
+wire [24:0] sdram_addr;
+wire  [7:0] sdram_din;
+wire        sdram_wr;
+wire        sdram_rd;
+wire [7:0]  sdram_dout;
 
-always @(posedge sys_clock) begin
+always @(*) begin
 	if(is_downloading && download_wr) begin
-		sdram_din    <= download_data;
 		sdram_addr   <= download_addr;
+		sdram_din    <= download_data;
 		sdram_wr     <= download_wr;
-		sdram_rd     <= 1'b1;
+		sdram_rd     <= 1'b1;			
 	end	
 	else if(eraser_busy) begin		
-		sdram_din    <= eraser_data;
 		sdram_addr   <= eraser_addr;
+		sdram_din    <= eraser_data;
 		sdram_wr     <= eraser_wr;
 		sdram_rd     <= 1'b1;		
 	end	
-	else if(debugger_busy) begin		
-		sdram_din    <= debug_data_wr;		
-		sdram_addr   <= debug_addr;
-		sdram_wr     <= debug_wr;
-		sdram_rd     <= 1'b1;		
-	end	
 	else begin
-		sdram_din    <= ram_din;
-		sdram_addr   <= ram_addr;
-		sdram_wr     <= ram_wr;
-		sdram_rd     <= ram_rd;
+		sdram_addr   <= { 9'd0, cpu_addr[15:0] };
+		sdram_din    <= cpu_dout;		
+		sdram_wr     <= cpu_wr;
+		sdram_rd     <= cpu_rd;
 	end	
 end
 
-// sdram module taken from from lesson4\sdram.v and 
-// modified to output the "initialized" signal
 
-// the sdram has the following requirements:
-//
-// - "sys_clock": 8x faster than cpu so that cpu reads in 1 cpu cycle
-// - "sdram_clock": 8x faster -2.5ns delayed clock so that SDRAM sees stable cpu signals
-// - timing constraints in .sdc file
-// - can't be accessed before it's initialized ("initialized" pin)
 
-sdram sdram 
-(
+sdram sdram (
 	// interface to the MT48LC16M16 chip
    .sd_data        ( SDRAM_DQ                  ),
    .sd_addr        ( SDRAM_A                   ),
@@ -444,35 +418,18 @@ sdram sdram
    .sd_cas         ( SDRAM_nCAS                ),
 
    // system interface
-   .clk            ( sdram_clock               ),
-   .clkref         ( z80_ena                   ),
+   .clk            ( sys_clock                 ),
+   .clkref         ( cpu_clock                 ),
    .init           ( !pll_locked               ),
+
+   // cpu interface
+   .din            ( sdram_din                 ),
+   .addr           ( sdram_addr                ),
+   .we             ( sdram_wr                  ),
+   .oe         	 ( sdram_rd                  ),
+   .dout           ( sdram_dout                )
+);
 	
-	.q( sdram_q ),
-
-   // cpu interface	
-   .din            ( x_sdram_din               ),
-   .addr           ( x_sdram_addr              ),
-   .we             ( x_sdram_wr                ),
-   .oe         	 ( 1 /*sdram_rd*/            ),	
-   .dout           ( x_sdram_dout              )	
-);
-
-wire [15:0] x_sdram_addr;
-wire [7:0]  x_sdram_din;
-wire [7:0]  x_sdram_dout;
-wire        x_sdram_rd;
-wire        x_sdram_wr;
-
-sysram sysram 
-(
-  .clock  ( sys_clock        ),
-  .address( sdram_addr[15:0] ),  
-  .data   ( sdram_din        ),                       
-  .wren   ( sdram_wr         ),                       
-  .q      ( sdram_dout       )
-);
-
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -486,7 +443,7 @@ dac #(.C_bits(8)) dac_L
 	.clk_i  ( sys_clock       ),
    .res_n_i( pll_locked      ),	
 	.dac_i  ( CHANNEL_L       ),
-	.dac_o  ( AUDIO_L       )
+	.dac_o  ( AUDIO_L         )
 );
 
 // TODO audio 
@@ -498,95 +455,4 @@ dac #(.C_bits(8)) dac_R
 	.dac_o  ( AUDIO_R         )
 );
 
-
-/******************************************************************************************/
-/******************************************************************************************/
-/***************************************** @debug *****************************************/
-/******************************************************************************************/
-/******************************************************************************************/
-
-reg        debugger_busy;
-wire       debug_done;
-reg  [7:0] debug_counter;
-
-reg [15:0] debug_addr;
-wire [7:0] debug_data_rd;
-reg  [7:0] debug_data_wr;
-reg        debug_wr;
-
-reg debug;
-
-assign LED = ~debug;
-
-// debugs that ROM is loaded correctly (first 4 bytes checked)
-always @(posedge sys_clock) begin
-	if(RESET) begin
-		debugger_busy <= 0;	
-		debug_addr    <= 'hffff;
-		debug_counter <= 0;
-		debug_done    <= 0;
-		debug         <= 0;
-	end
-	else begin
-		if(z80_ena) begin
-			if(!debug_done) begin
-				debugger_busy <= 1;
-				debug_addr    <= debug_addr + 1;
-				debug_wr      <= 0;			
-				
-				if(debug_addr == 0 && sdram_dout == 'hf3) debug_counter <= debug_counter + 1;
-				if(debug_addr == 1 && sdram_dout == 'hc3) debug_counter <= debug_counter + 1;
-				if(debug_addr == 2 && sdram_dout == 'h5a) debug_counter <= debug_counter + 1;
-				if(debug_addr == 3 && sdram_dout == 'h02) debug_counter <= debug_counter + 1;
-
-				if(debug_addr == 4) begin
-					debugger_busy <= 0;
-					debug_done <= 1;
-				end
-				
-				if(debug_counter == 4) debug <= 1;
-									
-			end
-		end
-		
-		/*
-		if(z80_ena) begin
-			debug_done <= 1;
-			debug <= sdram_dout != true_sdram_dout;
-		end 
-		*/
-	end
-end
-
-/*
-// simulate a fictional LED peripheral
-reg [7:0] LED_latch = 0;
-
-reg [7:0] state;
-
-always @(posedge sys_clock) begin
-	if(RESET) begin
-		LED_latch <= 0;
-		state <= 0;
-	end
-	else begin
-		debug <= (LED_latch != 0);
-
-		//debug <= debug1;
-		
-		//if(state == 0 && INT_n == 1)            state <= 1;
-		//if(state == 1 && INT_n == 0)            state <= 2;
-		//if(state == 2 && z80_ena && IORQ && M1) state <= 3;
-		//if(state == 3 && z80_ena && IORQ && M1 && ctc_dout == 'h46) state <= 4;
-		
-		// LED_latch <= (state == 4);		
-		
-		if(LED_SEL && WR) begin
-			LED_latch <= cpu_dout;			
-		end
-	end
-end
-*/
-
 endmodule
-

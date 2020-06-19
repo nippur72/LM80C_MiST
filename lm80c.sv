@@ -30,14 +30,7 @@ module lm80c
 	output  [7:0] ram_din,
 	input   [7:0] ram_dout,
 	output        ram_rd,
-	output        ram_wr,	
-
-	// sdram test interface
-	output reg [15:0] x_sdram_addr,
-	output reg  [7:0] x_sdram_din,
-	input       [7:0] x_sdram_dout,
-	output            x_sdram_rd,
-	output            x_sdram_wr	
+	output        ram_wr	
 );
 
 assign ram_addr = A;
@@ -131,7 +124,7 @@ always @(posedge sys_clock) begin
 	VDP_SEL <= (A[7:4] == 'b0011) & IORQ & ~MREQ;
 	PSG_SEL <= (A[7:4] == 'b0100) & IORQ & ~MREQ;	
 	
-	LED_SEL <= (A[7:0]>=200 || A[7:0]<=254) & IORQ & ~MREQ;
+	//LED_SEL <= (A[7:0]>=200 || A[7:0]<=254) & IORQ & ~MREQ;
 	 
 	CSR <= RD_n | (IORQ_n | ~VDP_SEL);
 	CSW <= WR_n | (IORQ_n | ~VDP_SEL);
@@ -139,8 +132,7 @@ always @(posedge sys_clock) begin
 	BDIR = ~(~WR | ~PSG_SEL);
 	BC   = ~(A[0] | ~PSG_SEL);
 
-	//RAM_SEL <=  A[15] & MREQ;
-	RAM_SEL <= MREQ && (A > 32767 && A < 49152);
+	RAM_SEL <=  A[15] & MREQ;
 	ROM_SEL <= MREQ & A[15]==0;
 
 	if(RD && IORQ) 
@@ -149,7 +141,7 @@ always @(posedge sys_clock) begin
 						SIO_SEL ? sio_dout :
 						VDP_SEL ? vdp_dout :
 						PSG_SEL ? psg_dout :
-						LED_SEL ? led_dout : A[7:0];		
+						/*LED_SEL ? led_dout :*/ A[7:0];		
 
 	if(RD && MREQ) 
 		cpu_din <= ram_dout;
@@ -369,35 +361,7 @@ z80ctc_top z80ctc_top
 	// trigger 0-3 are not connected
 	// daisy chain not available in this Z80CTC implementation
 );
-
-/******************************************************************************************/
-/******************************************************************************************/
-/***************************************** @ena *******************************************/
-/******************************************************************************************/
-/******************************************************************************************/
-
-
-always @(posedge sys_clock) begin
-	if(z80_ena) begin
-		if(LED_SEL) begin
-			if(WR && A[7:0] == 200) begin x_sdram_wr  <= 0;	x_sdram_addr[ 7:0] <= cpu_dout; end
-			if(WR && A[7:0] == 201) begin x_sdram_wr  <= 0;	x_sdram_addr[15:8] <= cpu_dout; end
-			if(A[7:0] == 202) begin
-				if(WR) begin
-					x_sdram_din <= cpu_dout;			
-					x_sdram_wr  <= 1;
-				end 
-				if(RD) begin
-					x_sdram_wr  <= 0;					
-				end				
-			end			
-		end
-	end
-end
-
-wire [7:0] led_dout = (RD && A[7:0] == 200) ? x_sdram_addr[ 7:0] :
-			             (RD && A[7:0] == 201) ? x_sdram_addr[15:8] :
-							 (RD && A[7:0] == 202) ? x_sdram_dout       : 'hfe;			
+			
 
 endmodule
 
