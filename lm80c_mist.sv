@@ -388,38 +388,36 @@ eraser eraser(
 assign SDRAM_CKE = 1; // pll_locked; // was: 1'b1 in lesson4/soc.v
 assign SDRAM_CLK = ~sdram_clock;
 
-wire [24:0] sdram_addr   ;
-wire        sdram_wr     ;
-wire        sdram_rd     ;
-wire [7:0]  sdram_dout   ; 
-wire [7:0]  sdram_din    ; 
+reg  [24:0] sdram_addr;
+reg         sdram_wr  ;
+reg         sdram_rd  ;
+reg  [7:0]  sdram_din ; 
+wire [7:0]  sdram_dout; 
 
-wire [7:0]  true_sdram_dout ; 
-
-always @(*) begin
+always @(posedge sys_clock) begin
 	if(is_downloading && download_wr) begin
-		sdram_din    = download_data;
-		sdram_addr   = download_addr;
-		sdram_wr     = download_wr;
-		sdram_rd     = 1'b1;
+		sdram_din    <= download_data;
+		sdram_addr   <= download_addr;
+		sdram_wr     <= download_wr;
+		sdram_rd     <= 1'b1;
 	end	
 	else if(eraser_busy) begin		
-		sdram_din    = eraser_data;
-		sdram_addr   = eraser_addr;
-		sdram_wr     = eraser_wr;
-		sdram_rd     = 1'b1;		
+		sdram_din    <= eraser_data;
+		sdram_addr   <= eraser_addr;
+		sdram_wr     <= eraser_wr;
+		sdram_rd     <= 1'b1;		
 	end	
 	else if(debugger_busy) begin		
-		sdram_din    = debug_data_wr;		
-		sdram_addr   = debug_addr;
-		sdram_wr     = debug_wr;
-		sdram_rd     = 1'b1;		
+		sdram_din    <= debug_data_wr;		
+		sdram_addr   <= debug_addr;
+		sdram_wr     <= debug_wr;
+		sdram_rd     <= 1'b1;		
 	end	
 	else begin
-		sdram_din    = ram_din;
-		sdram_addr   = ram_addr;
-		sdram_wr     = ram_wr;
-		sdram_rd     = ram_rd;
+		sdram_din    <= ram_din;
+		sdram_addr   <= ram_addr;
+		sdram_wr     <= ram_wr;
+		sdram_rd     <= ram_rd;
 	end	
 end
 
