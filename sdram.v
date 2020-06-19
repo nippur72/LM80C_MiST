@@ -35,9 +35,7 @@ module sdram (
 	// cpu/chipset interface
 	input 		 		init,			// init signal after FPGA config to initialize RAM
 	input 		 		clk,			// sdram is accessed at up to 128MHz
-	input					clkref,		// reference clock to sync to
-	
-	input [2:0] q,
+	input					clkref,		// reference clock to sync to	
 	
 	input [7:0]  		din,			// data input from chipset/cpu
 	output [7:0]      dout,			// data output to chipset/cpu
@@ -65,8 +63,7 @@ localparam STATE_CMD_START = 3'd1;   // state in which a new command can be star
 localparam STATE_CMD_CONT  = STATE_CMD_START  + RASCAS_DELAY - 3'd1; // 4 command can be continued
 localparam STATE_LAST      = 3'd7;   // last state in cycle
 
-/*
-reg [2:0] q /* synthesis noprune * /;
+reg [2:0] q /* synthesis noprune */;
 always @(posedge clk) begin
 	// 32Mhz counter synchronous to 4 Mhz clock
    // force counter to pass state 5->6 exactly after the rising edge of clkref
@@ -76,7 +73,7 @@ always @(posedge clk) begin
       ((q != 7) && (q != 0)))
 			q <= q + 3'd1;
 end
-*/
+
 
 // ---------------------------------------------------------------------
 // --------------------------- startup/reset ---------------------------
