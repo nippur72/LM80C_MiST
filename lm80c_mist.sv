@@ -113,6 +113,12 @@ wire RESET = ~ROM_loaded | reset_key | eraser_busy;
 // stops the cpu when booting, downloading or erasing
 wire WAIT = ~ROM_loaded | is_downloading;
 
+// detect the hardware reset switch 
+reg reset_switch_pressed;
+always @(sys_clock) begin
+	if(RESET) reset_switch_pressed <= 0;
+	else if(st_reset_switch) reset_switch_pressed <= 1;
+end
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -282,9 +288,9 @@ mist_video
 	.scanlines(2'b00),           // scanlines (00-none 01-25% 10-50% 11-75%)	
 	.ce_divider(1),              // non-scandoubled pixel clock divider 0 - clk_sys/4, 1 - clk_sys/2
 
-	.scandoubler_disable(1),     // 0 = HVSync 31KHz, 1 = CSync 15KHz	
-	.no_csync(no_csync),         // 1 = disable csync without scandoubler	
-	.ypbpr(ypbpr),               // 1 = YPbPr output on composite sync
+	.scandoubler_disable(scandoubler_disable),   // 0 = HVSync 31KHz, 1 = CSync 15KHz	
+	.no_csync(no_csync),                         // 1 = disable csync without scandoubler	
+	.ypbpr(ypbpr),                               // 1 = YPbPr output on composite sync
 	
 	.rotate(2'b00),              // Rotate OSD [0] - rotate [1] - left or right	
 	.blend(0),                   // composite-like blending
@@ -360,7 +366,7 @@ wire [7:0]  eraser_data;
 eraser eraser(
 	.clk      ( sys_clock     ),
 	.ena      ( z80_ena       ),
-	.trigger  ( st_menu_reset | st_reset_switch ),	
+	.trigger  ( st_menu_reset | reset_switch_pressed ),	
 	.erasing  ( eraser_busy   ),
 	.wr       ( eraser_wr     ),
 	.addr     ( eraser_addr   ),
