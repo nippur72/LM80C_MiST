@@ -66,7 +66,6 @@ wire pll_locked;
 wire sys_clock;      // cpu x 8
 wire sdram_clock;    // cpu x 8 -90°
 wire vdp_clock;      // VDP x 2
-wire CLOCK;          // cpu = 3.686400
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0] ),
@@ -74,8 +73,7 @@ pll pll (
 
 	 .c0     ( sys_clock   ),     
 	 .c1     ( sdram_clock ),
-	 .c2     ( vdp_clock   ),
-	 .c3     ( CLOCK       )
+	 .c2     ( vdp_clock   )	 
 );
 
 /******************************************************************************************/
@@ -352,10 +350,11 @@ downloader (
    .ROM_done    ( ROM_loaded      ),	
 	         
    // external ram interface
-   .clk   ( CLOCK         ),
-   .wr    ( download_wr   ),
-   .addr  ( download_addr ),
-   .data  ( download_data )	
+   .clk     ( sys_clock     ),
+	.clk_ena ( z80_ena       ),
+   .wr      ( download_wr   ),
+   .addr    ( download_addr ),
+   .data    ( download_data )	
 );
 
 
@@ -449,7 +448,7 @@ sdram sdram
 
    // system interface
    .clk            ( sdram_clock               ),
-   .clkref         ( CLOCK                     ),
+   .clkref         ( z80_ena                   ),
    .init           ( !pll_locked               ),
 	
 	.q( sdram_q ),

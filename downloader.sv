@@ -9,6 +9,7 @@ module downloader (
    input SPI_SS4,
 	
 	input 			   clk,
+	input             clk_ena,
 	output reg        wr,
 	output reg [24:0] addr,
 	output reg [7:0]  data,
@@ -24,8 +25,8 @@ wire [24:0] dio_addr;
 wire [7:0]  dio_data;
 
 data_io data_io (
-	.clk_sys ( clk  ),
-	.clkref_n( 0    ),  // keep this to zero
+	.clk_sys ( clk      ),
+	.clkref_n( ~clk_ena ),  // keep this to zero
 	
 	// io controller spi interface
 	.SPI_SCK( SPI_SCK ),
