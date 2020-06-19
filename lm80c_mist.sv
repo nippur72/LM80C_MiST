@@ -65,8 +65,7 @@ module lm80c_mist
 wire pll_locked;
 wire sys_clock;      // cpu x 8
 wire sdram_clock;    // cpu x 8 -90°
-wire vdp_clock;      // cpu x 6 (VDP x 2)
-
+wire vdp_clock;      // VDP x 2
 wire CLOCK;          // cpu = 3.686400
 
 pll pll (
@@ -75,7 +74,8 @@ pll pll (
 
 	 .c0     ( sys_clock   ),     
 	 .c1     ( sdram_clock ),
-	 .c2     ( vdp_clock   )
+	 .c2     ( vdp_clock   ),
+	 .c3     ( CLOCK       )
 );
 
 /******************************************************************************************/
@@ -91,31 +91,14 @@ always @(posedge vdp_clock) begin
 end 
 wire vdp_ena = cnt_vdp == 0;                   // vdp_clock divided by 2
 
-
-reg [3:0] cnt_cpu = 0;
+reg [2:0] cnt_cpu = 0;
 always @(posedge sys_clock) begin	
 	if(!pll_locked) cnt_cpu <= 0;
 	else            cnt_cpu <= cnt_cpu + 1;	
 end
 
-wire z80_ena = cnt_cpu == 0 || cnt_cpu == 8;   // sys_clock divided by 8
-wire psg_ena = cnt_cpu == 0;                   // sys_clock divided by 16
-
-assign CLOCK =
-   (cnt_cpu ==  0 || cnt_cpu ==  8) ? 1 :
-	(cnt_cpu ==  1 || cnt_cpu ==  9) ? 1 :
-	(cnt_cpu ==  2 || cnt_cpu == 10) ? 1 :
-	(cnt_cpu ==  3 || cnt_cpu == 12) ? 1 : 0;
-
-wire [2:0] sdram_q =
-	(cnt_cpu ==  0 || cnt_cpu ==  8) ? 0 :
-	(cnt_cpu ==  1 || cnt_cpu ==  9) ? 1 :
-	(cnt_cpu ==  2 || cnt_cpu == 10) ? 2 :
-	(cnt_cpu ==  3 || cnt_cpu == 11) ? 3 :
-	(cnt_cpu ==  4 || cnt_cpu == 12) ? 4 :
-	(cnt_cpu ==  5 || cnt_cpu == 13) ? 5 :
-	(cnt_cpu ==  6 || cnt_cpu == 14) ? 6 :
-	(cnt_cpu ==  7 || cnt_cpu == 15) ? 7 : 0;
+wire z80_ena = cnt_cpu == 0;   // 
+wire psg_ena = cnt_cpu == 0;   // 
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -405,7 +388,7 @@ eraser eraser(
 /******************************************************************************************/
 							
 assign SDRAM_CKE = 1; // pll_locked; // was: 1'b1 in lesson4/soc.v
-assign SDRAM_CLK = sdram_clock;
+assign SDRAM_CLK = ~sdram_clock;
 
 wire [24:0] sdram_addr   ;
 wire        sdram_wr     ;
@@ -465,7 +448,7 @@ sdram sdram
    .sd_cas         ( SDRAM_nCAS                ),
 
    // system interface
-   .clk            ( sys_clock                 ),
+   .clk            ( sdram_clock               ),
    .clkref         ( CLOCK                     ),
    .init           ( !pll_locked               ),
 	
