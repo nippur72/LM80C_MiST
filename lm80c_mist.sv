@@ -64,7 +64,7 @@ module lm80c_mist
 
 wire pll_locked;
 wire sys_clock;      // cpu x 8
-wire sdram_clock;    // cpu x 8 -90°
+wire sdram_clock;    // cpu x 8 -90Â°
 wire vdp_clock;      // VDP x 2
 
 pll pll (
@@ -136,8 +136,8 @@ wire [7:0] column_bits;
 
 // ram
 wire [15:0] ram_addr;
-wire [7:0]  ram_dout;
 wire [7:0]  ram_din;
+wire [7:0]  ram_dout;
 wire        ram_rd;
 wire        ram_wr;	
 
@@ -170,8 +170,8 @@ lm80c lm80c
 	
 	// RAM interface
 	.ram_addr ( ram_addr   ),
-	.ram_dout ( ram_dout   ),	
-	.ram_din  ( sdram_dout ),
+	.ram_din  ( ram_din    ),	
+	.ram_dout ( sdram_dout ),
 	.ram_rd   ( ram_rd     ),
 	.ram_wr   ( ram_wr     ),
 	
@@ -417,7 +417,7 @@ always @(*) begin
 		sdram_rd     = 1'b1;		
 	end	
 	else begin
-		sdram_din    = ram_dout;
+		sdram_din    = ram_din;
 		sdram_addr   = ram_addr;
 		sdram_wr     = ram_wr;
 		sdram_rd     = ram_rd;

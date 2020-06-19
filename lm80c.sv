@@ -27,8 +27,8 @@ module lm80c
 	
 	// RAM interface
 	output [15:0] ram_addr,
-	output  [7:0] ram_dout,
-	input   [7:0] ram_din,
+	output  [7:0] ram_din,
+	input   [7:0] ram_dout,
 	output        ram_rd,
 	output        ram_wr,	
 
@@ -41,7 +41,7 @@ module lm80c
 );
 
 assign ram_addr = A;
-assign ram_dout = cpu_dout;
+assign ram_din  = cpu_dout;
 assign ram_rd   = MREQ & RD & ~IORQ;
 assign ram_wr   = MREQ & WR & ~IORQ & RAM_SEL;
 
@@ -152,7 +152,7 @@ always @(posedge sys_clock) begin
 						LED_SEL ? led_dout : A[7:0];		
 
 	if(RD && MREQ) 
-		cpu_din <= ram_din;
+		cpu_din <= ram_dout;
 		
 	if(IORQ && M1) 
 		cpu_din <= ctc_dout;
