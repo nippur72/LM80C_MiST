@@ -7,7 +7,6 @@
 // TODO sdram (test out port)
 // TODO sprite bug
 // TODO bug volume 1,15:volume 2,15:volume 3,15:sound 3,200,200
-// TODO eliminare z80ena
 // TODO italian keyboard
 // TODO sio, pio dummy modules
 // TODO color problem (check pixel to pixel, vsync>200?)
