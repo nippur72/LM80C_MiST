@@ -255,7 +255,7 @@ wire [5:0] vdp_b;
 wire [7:0] vdp_dout;
 wire VDP_INT_n;
 
-tms9918 tms9918
+tms9918_async tms9918
 (
 	// clock
 	.RESET(RESET),
