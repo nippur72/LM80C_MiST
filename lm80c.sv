@@ -157,6 +157,7 @@ end
 /******************************************************************************************/
 /******************************************************************************************/
 
+/*
 // this TMS9918A implementation is from 
 // https://github.com/wsoltys/mist-cores/tree/master/fpga_colecovision/src/vdp18
 // modified to draw +5 dot pixels so to match the 10.7 Mhz speed
@@ -174,8 +175,6 @@ wire [5:0] vdp_r = { vdp_r_[0],vdp_r_[1],vdp_r_[2],vdp_r_[3],vdp_r_[4],vdp_r_[5]
 wire [5:0] vdp_g = { vdp_g_[0],vdp_g_[1],vdp_g_[2],vdp_g_[3],vdp_g_[4],vdp_g_[5] } ;
 wire [5:0] vdp_b = { vdp_b_[0],vdp_b_[1],vdp_b_[2],vdp_b_[3],vdp_b_[4],vdp_b_[5] } ;
 
-wire vram_ce;
-wire vram_oe;
 wire vram_we;
 
 wire [0:13] vram_a;        
@@ -229,7 +228,63 @@ vram vram
   .wren   ( vram_we    ),                       
   .q      ( vram_dout  )
 );
+*/
 
+wire        vram_we;
+wire [0:13] vram_a;        
+wire [0:7]  vram_din;      
+wire [0:7]  vram_dout;
+
+vram vram
+(
+  .clock  ( vdp_clock  ),  
+  .address( vram_a     ),  
+  .data   ( vram_din   ),                       
+  .wren   ( vram_we    ),                       
+  .q      ( vram_dout  )
+);
+
+/*
+wire vdp_hs;
+wire vdp_vs;
+wire [5:0] vdp_r;
+wire [5:0] vdp_g;
+wire [5:0] vdp_b;
+*/
+
+wire [7:0] vdp_dout;
+wire VDP_INT_n;
+
+tms9918 tms9918
+(
+	// clock
+	.RESET(RESET),
+	.clk(vdp_clock),
+	.ena(vdp_ena),
+	
+	// control signals
+   .csr_n  ( CSR       ),
+   .csw_n  ( CSW       ),
+	.mode   ( A[1]      ),	   
+   .int_n  ( VDP_INT_n ),
+
+	// cpu I/O 	
+   .cd_i          ( cpu_dout    ),
+   .cd_o          ( vdp_dout    ),
+		
+	//	vram	
+   .vram_we       ( vram_we     ),
+   .vram_a        ( vram_a      ),
+   .vram_d_o      ( vram_din    ),
+   .vram_d_i      ( vram_dout   ),		
+		
+	// video 
+	.HS(HS),
+	.VS(VS),
+	.R(R),
+	.G(G),
+	.B(B)
+);
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -237,6 +292,7 @@ vram vram
 /******************************************************************************************/
 /******************************************************************************************/
 
+/*
 reg [15:0] hcnt;
 reg [15:0] vcnt;
 reg flip = 0;
@@ -275,7 +331,7 @@ assign G  = test_g;
 assign B  = test_b;
 assign HS = test_hs;
 assign VS = test_vs;
-
+*/
 
 /******************************************************************************************/
 /******************************************************************************************/

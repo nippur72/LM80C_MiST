@@ -3,13 +3,12 @@
 // Antonino Porcino, nino.porcino@gmail.com
 //
 
-// TODO fix hardware reset switch
+// TODO async VDP design
 // TODO sprite bug
 // TODO bug volume 1,15:volume 2,15:volume 3,15:sound 3,200,200
 // TODO italian keyboard
 // TODO sio, pio dummy modules
 // TODO color problem (check pixel to pixel, vsync>200?)
-// TODO async VDP design
 // TODO understand dowloader/data_io need for CLOCK
 // TODO osd bug menu size with clk x 4
 
@@ -113,14 +112,7 @@ wire RESET = ~ROM_loaded | reset_key | eraser_busy;
 // stops the cpu when booting, downloading or erasing
 wire WAIT = ~ROM_loaded | is_downloading;
 
-// detect the hardware reset switch 
-reg reset_switch_pressed;
-always @(sys_clock) begin
-	if(RESET) reset_switch_pressed <= 0;
-	else if(st_reset_switch) reset_switch_pressed <= 1;
-end
-
-assign LED = ~st_reset_switch;
+assign LED = ~WAIT;
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -373,7 +365,7 @@ wire [7:0]  eraser_data;
 eraser eraser(
 	.clk      ( sys_clock     ),
 	.ena      ( z80_ena       ),
-	.trigger  ( st_menu_reset | reset_switch_pressed ),	
+	.trigger  ( st_menu_reset | st_reset_switch ),	
 	.erasing  ( eraser_busy   ),
 	.wr       ( eraser_wr     ),
 	.addr     ( eraser_addr   ),

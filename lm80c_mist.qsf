@@ -159,6 +159,7 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to SDRAM_*
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_*
 set_instance_assignment -name FAST_INPUT_REGISTER ON -to SDRAM_DQ*
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to SDRAM_DQ*
+set_global_assignment -name VERILOG_FILE tms9918.v
 set_global_assignment -name SYSTEMVERILOG_FILE lm80c_mist.sv
 set_global_assignment -name VERILOG_FILE eraser.v
 set_global_assignment -name SYSTEMVERILOG_FILE downloader.sv
