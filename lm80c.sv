@@ -367,8 +367,9 @@ YM2149 YM2149
 	
 );
 
-wire [8:0] sum_L = CHANNEL_A + CHANNEL_C;
+// according to the schematic, A goes to R, B to L and C to both
 wire [8:0] sum_R = CHANNEL_A + CHANNEL_C;
+wire [8:0] sum_L = CHANNEL_B + CHANNEL_C;
 
 assign CHANNEL_L = sum_L[8:1];
 assign CHANNEL_R = sum_R[8:1];

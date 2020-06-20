@@ -3,7 +3,6 @@
 // Antonino Porcino, nino.porcino@gmail.com
 //
 
-// TODO bug volume 1,15:volume 2,15:volume 3,15:sound 3,200,200
 // TODO italian keyboard
 // TODO sio, pio dummy modules
 // TODO color problem (check pixel to pixel, vsync>200?)
