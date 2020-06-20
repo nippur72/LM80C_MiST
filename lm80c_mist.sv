@@ -3,8 +3,6 @@
 // Antonino Porcino, nino.porcino@gmail.com
 //
 
-// TODO async VDP design
-// TODO sprite bug
 // TODO bug volume 1,15:volume 2,15:volume 3,15:sound 3,200,200
 // TODO italian keyboard
 // TODO sio, pio dummy modules
@@ -60,17 +58,20 @@ module lm80c_mist (
 /******************************************************************************************/
 /******************************************************************************************/
 
+// real CPU speed is 3.686400  MHz
+// real VDP speed is 10.738635 MHz
+
 wire pll_locked;
-wire vdp_clock;
-wire sys_clock;
+wire vdp_clock;       // 10.738635 x 4
+wire sys_clock;       // 3.686400 x 8
 
 pll pll (
 	 .inclk0 ( CLOCK_27[0]   ),
 	 .locked ( pll_locked    ),        
 	 
-	 .c0     ( vdp_clock     ),        
-	 .c1     ( sys_clock     ),        
-	 .c2     ( SDRAM_CLK     )         
+	 .c0     ( vdp_clock     ),     // vdp x 4   
+	 .c1     ( sys_clock     ),     // cpu x 8   
+	 .c2     ( SDRAM_CLK     )      // cpu x 8 phase shifted -2.5 ns   
 );
 
 /******************************************************************************************/
@@ -81,7 +82,7 @@ pll pll (
 
 // vdp
 
-reg cnt_vdp;
+reg [1:0] cnt_vdp;
 always @(posedge vdp_clock)
 	cnt_vdp <= cnt_vdp + 1;
 	
@@ -277,7 +278,7 @@ mist_video
 ) 
 mist_video
 (
-	.clk_sys(vdp_clock),       // 2x the VDP clock for the scandoubler
+	.clk_sys(vdp_clock),       // 4x the VDP clock for the scandoubler
 
 	// OSD SPI interface
    .SPI_DI(SPI_DI),
@@ -285,7 +286,7 @@ mist_video
    .SPI_SS3(SPI_SS3),
 
 	.scanlines(2'b00),           // scanlines (00-none 01-25% 10-50% 11-75%)	
-	.ce_divider(1),              // non-scandoubled pixel clock divider 0 - clk_sys/4, 1 - clk_sys/2
+	.ce_divider(0),              // non-scandoubled pixel clock divider 0 - clk_sys/4, 1 - clk_sys/2
 
 	.scandoubler_disable(scandoubler_disable),   // 0 = HVSync 31KHz, 1 = CSync 15KHz	
 	.no_csync(no_csync),                         // 1 = disable csync without scandoubler	

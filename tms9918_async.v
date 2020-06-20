@@ -109,6 +109,8 @@ reg [15:0] hcnt;
 reg [15:0] vcnt;
 reg flip = 0;
 
+localparam EXTRA_PIXELS = 0; // 5
+
 always @(posedge clk) begin
 	if(ena) begin	
 		if(RESET) begin
@@ -119,7 +121,7 @@ always @(posedge clk) begin
 			flip = ~flip;
 			if(flip) begin
 				hcnt <= hcnt + 1;
-				if(hcnt == 341+5) begin
+				if(hcnt == 341+EXTRA_PIXELS) begin
 					hcnt <= 0;
 					vcnt <= vcnt + 1;
 					if(vcnt == 260) vcnt <= 0;
