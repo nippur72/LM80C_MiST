@@ -54,7 +54,8 @@ always @(posedge clk) begin
 				key_status   <= 1'b0;
 				
 				case(key)	
-					PS2_KEY_F11   : begin resetkey <= ~key_status; end 
+					PS2_KEY_F11         : begin resetkey <= ~key_status; end 
+				   PS2_KEY_SHIFT_RIGHT : begin KM[1][3] <= key_status; end										
 					
 					KEY_HELP      : begin KM[7][7] <= key_status; end
 					KEY_F3        : begin KM[7][6] <= key_status; end
@@ -108,7 +109,7 @@ always @(posedge clk) begin
 					KEY_E         : begin KM[1][6] <= key_status; end
 					KEY_S         : begin KM[1][5] <= key_status; end
 					KEY_Z         : begin KM[1][4] <= key_status; end
-					KEY_SHIFT     : begin KM[1][3] <= key_status; end
+					KEY_SHIFT     : begin KM[1][3] <= key_status; end					
 					KEY_A         : begin KM[1][2] <= key_status; end
 					KEY_W         : begin KM[1][1] <= key_status; end
 					KEY_3         : begin KM[1][0] <= key_status; end
