@@ -120,6 +120,8 @@ always @(sys_clock) begin
 	else if(st_reset_switch) reset_switch_pressed <= 1;
 end
 
+assign LED = ~st_reset_switch;
+
 /******************************************************************************************/
 /******************************************************************************************/
 /***************************************** @lm80c *****************************************/
@@ -222,9 +224,11 @@ localparam conf_str = {
 
 localparam conf_str_len = $size(conf_str)>>3;
 
-wire [7:0] status;       // the status register is controlled by the user_io module
+wire [7:0] status;       
+wire [1:0] buttons;
+wire [1:0] switches;
 
-wire st_reset_switch = status[0];
+wire st_reset_switch = buttons[1];
 wire st_menu_reset   = status[3];
 
 wire scandoubler_disable;
@@ -247,8 +251,11 @@ user_io (
 	.scandoubler_disable ( scandoubler_disable ),
 	.ypbpr               ( ypbpr               ),
 	.no_csync            ( no_csync            ),
-	
+		
 	.status     ( status    ),
+	
+	.buttons    ( buttons   ),
+	.switches   ( switches  ),
 	
 	.clk_sys    ( sys_clock ),
 	.clk_sd     ( sys_clock ),       // sd card clock
