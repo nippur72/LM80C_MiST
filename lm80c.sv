@@ -123,8 +123,6 @@ always @(posedge sys_clock) begin
 	SIO_SEL <= (A[7:4] == 'b0010) & IORQ & ~MREQ;
 	VDP_SEL <= (A[7:4] == 'b0011) & IORQ & ~MREQ;
 	PSG_SEL <= (A[7:4] == 'b0100) & IORQ & ~MREQ;	
-	
-	//LED_SEL <= (A[7:0]>=200 || A[7:0]<=254) & IORQ & ~MREQ;
 	 
 	CSR <= RD_n | (IORQ_n | ~VDP_SEL);
 	CSW <= WR_n | (IORQ_n | ~VDP_SEL);
@@ -132,7 +130,7 @@ always @(posedge sys_clock) begin
 	BDIR = ~(~WR | ~PSG_SEL);
 	BC   = ~(A[0] | ~PSG_SEL);
 
-	RAM_SEL <=  A[15] & MREQ;
+	RAM_SEL <= A[15] & MREQ;
 	ROM_SEL <= MREQ & A[15]==0;
 
 	if(RD && IORQ) 
@@ -140,8 +138,7 @@ always @(posedge sys_clock) begin
 						CTC_SEL ? ctc_dout :
 						SIO_SEL ? sio_dout :
 						VDP_SEL ? vdp_dout :
-						PSG_SEL ? psg_dout :
-						/*LED_SEL ? led_dout :*/ A[7:0];		
+						PSG_SEL ? psg_dout : A[7:0];		
 
 	if(RD && MREQ) 
 		cpu_din <= ram_dout;
@@ -157,79 +154,6 @@ end
 /******************************************************************************************/
 /******************************************************************************************/
 
-/*
-// this TMS9918A implementation is from 
-// https://github.com/wsoltys/mist-cores/tree/master/fpga_colecovision/src/vdp18
-// modified to draw +5 dot pixels so to match the 10.7 Mhz speed
-
-wire VDP_INT_n;
-
-wire vdp_hs;
-wire vdp_vs;
-
-wire [0:7] vdp_r_;		
-wire [0:7] vdp_g_;
-wire [0:7] vdp_b_;
-
-wire [5:0] vdp_r = { vdp_r_[0],vdp_r_[1],vdp_r_[2],vdp_r_[3],vdp_r_[4],vdp_r_[5] } ;
-wire [5:0] vdp_g = { vdp_g_[0],vdp_g_[1],vdp_g_[2],vdp_g_[3],vdp_g_[4],vdp_g_[5] } ;
-wire [5:0] vdp_b = { vdp_b_[0],vdp_b_[1],vdp_b_[2],vdp_b_[3],vdp_b_[4],vdp_b_[5] } ;
-
-wire vram_we;
-
-wire [0:13] vram_a;        
-wire [0:7]  vram_din;      // TODO attenzione agli indici invertiti!?
-wire [0:7]  vram_dout;
-
-wire [7:0] vdp_dout;
-		
-vdp18_core
-  
-#(
-	.is_pal_g(0)     // NTSC	
-) 
-
-vdp
-(
-	.clk_i         ( vdp_clock   ),
-	.clk_en_10m7_i ( vdp_ena     ),
-	
-	.reset_n_i     ( ~RESET      ),
-	
-   .csr_n_i       ( CSR         ),
-   .csw_n_i       ( CSW         ),
-	
-   .mode_i        ( A[1]        ),
-		
-   .int_n_o       ( VDP_INT_n   ),
-	
-   .cd_i          ( cpu_dout    ),
-   .cd_o          ( vdp_dout    ),
-		
-   .vram_we_o     ( vram_we     ),
-   .vram_a_o      ( vram_a      ),
-   .vram_d_o      ( vram_din    ),
-   .vram_d_i      ( vram_dout   ),
-	
-   .rgb_r_o       ( vdp_r_  ),
-   .rgb_g_o       ( vdp_g_  ),
-   .rgb_b_o       ( vdp_b_  ),
-	
-   .hsync_n_o     ( vdp_hs ),
-   .vsync_n_o     ( vdp_vs )
-
-);
-
-vram vram
-(
-  .clock  ( vdp_clock  ),  
-  .address( vram_a     ),  
-  .data   ( vram_din   ),                       
-  .wren   ( vram_we    ),                       
-  .q      ( vram_dout  )
-);
-*/
-
 wire        vram_we;
 wire [0:13] vram_a;        
 wire [0:7]  vram_din;      
@@ -243,14 +167,6 @@ vram vram
   .wren   ( vram_we    ),                       
   .q      ( vram_dout  )
 );
-
-/*
-wire vdp_hs;
-wire vdp_vs;
-wire [5:0] vdp_r;
-wire [5:0] vdp_g;
-wire [5:0] vdp_b;
-*/
 
 wire [7:0] vdp_dout;
 wire VDP_INT_n;

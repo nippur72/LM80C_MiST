@@ -43,6 +43,7 @@ reg [0:7] _stable_cd_i;
 
 always @(posedge clk) begin
 
+/*
 	_metastable_csr_n <= csr_n;
 	_metastable_csw_n <= csw_n;
    _metastable_mode  <= mode;
@@ -52,6 +53,13 @@ always @(posedge clk) begin
 	_stable_csw_n <= _metastable_csw_n;
    _stable_mode  <= _metastable_mode;
 	_stable_cd_i  <= _metastable_cd_i;
+*/
+
+	{ _stable_csr_n, _metastable_csr_n } <= { _metastable_csr_n, csr_n };
+	{ _stable_csw_n, _metastable_csw_n } <= { _metastable_csw_n, csw_n };
+	{ _stable_mode , _metastable_mode  } <= { _metastable_mode , mode  };
+	{ _stable_cd_i , _metastable_cd_i  } <= { _metastable_cd_i , cd_i };
+	
 end
 
 
