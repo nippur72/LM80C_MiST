@@ -159,6 +159,8 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to SDRAM_*
 set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to SDRAM_*
 set_instance_assignment -name FAST_INPUT_REGISTER ON -to SDRAM_DQ*
 set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to SDRAM_DQ*
+set_global_assignment -name SYSTEMVERILOG_FILE lm80c/ps2_keyboard_adapter.sv
+set_global_assignment -name SYSTEMVERILOG_FILE mist_keyboard.sv
 set_global_assignment -name VHDL_FILE lm80c/Z80CTC/z80ctc_top.vhd
 set_global_assignment -name QIP_FILE lm80c/Z80CTC/z80ctc.qip
 set_global_assignment -name QIP_FILE lm80c/Z80CTC/pll.qip
@@ -200,7 +202,6 @@ set_global_assignment -name VERILOG_FILE eraser.v
 set_global_assignment -name SYSTEMVERILOG_FILE downloader.sv
 set_global_assignment -name VERILOG_FILE "mist-modules/data_io.v"
 set_global_assignment -name VHDL_FILE ps2_intf.vhd
-set_global_assignment -name SYSTEMVERILOG_FILE keyboard.sv
 set_global_assignment -name VERILOG_FILE "mist-modules/user_io.v"
 set_global_assignment -name VERILOG_FILE "mist-modules/sd_card.v"
 set_global_assignment -name VERILOG_FILE "mist-modules/scandoubler.v"

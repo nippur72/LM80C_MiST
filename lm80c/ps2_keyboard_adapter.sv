@@ -1,3 +1,18 @@
+module lm80c_ps2keyboard_adapter
+(
+	input clk,
+	input reset,
+	
+	// input from ps2 keyboard
+	input        valid,       // 1 the key is valid and can be processed
+	input [15:0] key,         // the (extended) ps2 key code
+	input        key_status,  // 1=pressed, 0=released
+
+	// lm80c interface
+	output reg [7:0] KM [7:0],       // the 8x8 LM80C keyboard matrix (low active)
+	output reg       resetkey        // 1=hardware reset key pressed
+);
+
 // fkeys row
 localparam [15:0] PS2_KEY_ESC           = 'h76;
 localparam [15:0] PS2_KEY_F1            = 'h05;
@@ -188,3 +203,96 @@ localparam [15:0] KEY_RUN_STOP  = PS2_KEY_TAB;
 localparam [15:0] KEY_CTRL      = PS2_KEY_CONTROL;
 localparam [15:0] KEY_CLR_HOME  = PS2_KEY_HOME;
 localparam [15:0] KEY_1         = PS2_KEY_1;
+
+// put in negated logic
+wire status = ~key_status;  
+
+always @(posedge clk or posedge reset) begin
+	if(reset) begin		
+		KM[0] <= 8'b11111111;
+		KM[1] <= 8'b11111111;
+		KM[2] <= 8'b11111111;
+		KM[3] <= 8'b11111111;
+		KM[4] <= 8'b11111111;
+		KM[5] <= 8'b11111111;
+		KM[6] <= 8'b11111111;
+		KM[7] <= 8'b11111111;			
+	end 
+	else begin	
+		if(valid) begin
+			case(key)	
+				PS2_KEY_F11         : begin resetkey <= ~status; end 
+				PS2_KEY_SHIFT_RIGHT : begin KM[1][3] <= status; end										
+				
+				KEY_HELP      : begin KM[7][7] <= status; end
+				KEY_F3        : begin KM[7][6] <= status; end
+				KEY_F2        : begin KM[7][5] <= status; end
+				KEY_F1        : begin KM[7][4] <= status; end
+				KEY_AT        : begin KM[7][3] <= status; end
+				KEY_POUND     : begin KM[7][2] <= status; end
+				KEY_RETURN    : begin KM[7][1] <= status; end
+				KEY_INST_DEL  : begin KM[7][0] <= status; end
+				KEY_RIGHT     : begin KM[6][7] <= status; end
+				KEY_PLUS      : begin KM[6][6] <= status; end
+				KEY_EQUAL     : begin KM[6][5] <= status; end
+				KEY_ESC       : begin KM[6][4] <= status; end
+				KEY_SLASH     : begin KM[6][3] <= status; end
+				KEY_SEMICOLON : begin KM[6][2] <= status; end
+				KEY_ASTERISK  : begin KM[6][1] <= status; end
+				KEY_LEFT      : begin KM[6][0] <= status; end
+				KEY_UP        : begin KM[5][7] <= status; end
+				KEY_MINUS     : begin KM[5][6] <= status; end
+				KEY_COLON     : begin KM[5][5] <= status; end
+				KEY_DOT       : begin KM[5][4] <= status; end
+				KEY_COMMA     : begin KM[5][3] <= status; end
+				KEY_L         : begin KM[5][2] <= status; end
+				KEY_P         : begin KM[5][1] <= status; end
+				KEY_DOWN      : begin KM[5][0] <= status; end
+				KEY_0         : begin KM[4][7] <= status; end
+				KEY_O         : begin KM[4][6] <= status; end
+				KEY_K         : begin KM[4][5] <= status; end
+				KEY_M         : begin KM[4][4] <= status; end
+				KEY_N         : begin KM[4][3] <= status; end
+				KEY_J         : begin KM[4][2] <= status; end
+				KEY_I         : begin KM[4][1] <= status; end
+				KEY_9         : begin KM[4][0] <= status; end
+				KEY_8         : begin KM[3][7] <= status; end
+				KEY_U         : begin KM[3][6] <= status; end
+				KEY_H         : begin KM[3][5] <= status; end
+				KEY_B         : begin KM[3][4] <= status; end
+				KEY_V         : begin KM[3][3] <= status; end
+				KEY_G         : begin KM[3][2] <= status; end
+				KEY_Y         : begin KM[3][1] <= status; end
+				KEY_7         : begin KM[3][0] <= status; end
+				KEY_6         : begin KM[2][7] <= status; end
+				KEY_T         : begin KM[2][6] <= status; end
+				KEY_F         : begin KM[2][5] <= status; end
+				KEY_C         : begin KM[2][4] <= status; end
+				KEY_X         : begin KM[2][3] <= status; end
+				KEY_D         : begin KM[2][2] <= status; end
+				KEY_R         : begin KM[2][1] <= status; end
+				KEY_5         : begin KM[2][0] <= status; end
+				KEY_4         : begin KM[1][7] <= status; end
+				KEY_E         : begin KM[1][6] <= status; end
+				KEY_S         : begin KM[1][5] <= status; end
+				KEY_Z         : begin KM[1][4] <= status; end
+				KEY_SHIFT     : begin KM[1][3] <= status; end					
+				KEY_A         : begin KM[1][2] <= status; end
+				KEY_W         : begin KM[1][1] <= status; end
+				KEY_3         : begin KM[1][0] <= status; end
+				KEY_2         : begin KM[0][7] <= status; end
+				KEY_Q         : begin KM[0][6] <= status; end
+				KEY_CBM       : begin KM[0][5] <= status; end
+				KEY_SPACE     : begin KM[0][4] <= status; end
+				KEY_RUN_STOP  : begin KM[0][3] <= status; end
+				KEY_CTRL      : begin KM[0][2] <= status; end
+				KEY_CLR_HOME  : begin KM[0][1] <= status; end
+				KEY_1         : begin KM[0][0] <= status; end				
+			endcase
+		end
+	end		
+end
+
+endmodule
+
+

@@ -3,6 +3,7 @@
 // Antonino Porcino, nino.porcino@gmail.com
 //
 
+// TODO aggiungere "or reset" negli always
 // TODO italian keyboard
 // TODO sio, pio dummy modules
 // TODO color problem (check pixel to pixel, vsync>200?)
@@ -186,19 +187,42 @@ lm80c lm80c
 wire ps2_kbd_clk;
 wire ps2_kbd_data;
 
-wire reset_key;
-wire [7:0] KM[7:0];
+wire        key_valid;
+wire [15:0] key;
+wire        key_status;
 
-keyboard keyboard 
+mist_keyboard mist_keyboard 
 (
 	.reset    ( !pll_locked  ),
 	.clk      ( sys_clock    ),
+	
+	// simplified keyboard output
+	.valid  ( key_valid    ),
+	.key    ( key          ),
+	.status ( key_status   ),
 
-	.KM       ( KM           ),	
-	.resetkey ( reset_key    ),
-
+	// ps2 interface
 	.ps2_clk  ( ps2_kbd_clk  ),
 	.ps2_data ( ps2_kbd_data )
+);
+
+
+wire reset_key;
+wire [7:0] KM[7:0];
+
+lm80c_ps2keyboard_adapter kbd
+(
+	.reset    ( !pll_locked  ),
+	.clk      ( sys_clock    ),
+	
+	// input
+	.valid      ( key_valid    ),
+	.key        ( key          ),
+	.key_status ( key_status   ),
+	
+	// output
+	.KM       ( KM           ),	
+	.resetkey ( reset_key    )
 );
 
 
