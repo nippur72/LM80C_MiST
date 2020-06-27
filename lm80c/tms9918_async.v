@@ -43,18 +43,6 @@ reg [0:7] _stable_cd_i;
 
 always @(posedge clk) begin
 
-/*
-	_metastable_csr_n <= csr_n;
-	_metastable_csw_n <= csw_n;
-   _metastable_mode  <= mode;
-	_metastable_cd_i  <= cd_i;
-	
-	_stable_csr_n <= _metastable_csr_n;
-	_stable_csw_n <= _metastable_csw_n;
-   _stable_mode  <= _metastable_mode;
-	_stable_cd_i  <= _metastable_cd_i;
-*/
-
 	{ _stable_csr_n, _metastable_csr_n } <= { _metastable_csr_n, csr_n };
 	{ _stable_csw_n, _metastable_csw_n } <= { _metastable_csw_n, csw_n };
 	{ _stable_mode , _metastable_mode  } <= { _metastable_mode , mode  };
@@ -62,11 +50,12 @@ always @(posedge clk) begin
 	
 end
 
+localparam IS_PAL = 0;
 
 vdp18_core
   
 #(
-	.is_pal_g(0)     // NTSC	
+	.is_pal_g(IS_PAL) // PAL or NTSC	
 ) 
 
 vdp
@@ -117,7 +106,13 @@ reg [15:0] hcnt;
 reg [15:0] vcnt;
 reg flip = 0;
 
-localparam EXTRA_PIXELS = 0; // 5
+
+// screen geometry
+// - NTSC: 342 x 261
+// - PAL:  342 x 312
+
+localparam SCREEN_HWIDTH = 342;
+localparam SCREEN_NLINES = IS_PAL ? 312 : 261;
 
 always @(posedge clk) begin
 	if(ena) begin	
@@ -129,23 +124,31 @@ always @(posedge clk) begin
 			flip = ~flip;
 			if(flip) begin
 				hcnt <= hcnt + 1;
-				if(hcnt == 341+EXTRA_PIXELS) begin
+				if(hcnt == (SCREEN_HWIDTH-1)) begin
 					hcnt <= 0;
 					vcnt <= vcnt + 1;
-					if(vcnt == 260) vcnt <= 0;
+					if(vcnt == SCREEN_NLINES-1) vcnt <= 0;
 				end
 			end
 		end	
 	end
 end
 
-assign VS = 1 ? (vcnt < 4  ? 0 : 1) : vdp_hs;
-assign HS = 1 ? (hcnt < 20 ? 0 : 1) : vdp_vs;
+localparam raw_output = 0;
 
 wire blank = (vcnt < 8) || (hcnt < 60 || hcnt > 340);
 
-assign R = 1 ? (blank ? 0 : vdp_r) : vdp_r;
-assign G = 1 ? (blank ? 0 : vdp_g) : vdp_r;
-assign B = 1 ? (blank ? 0 : vdp_b) : vdp_r;
+wire filtered_hs = (hcnt < 20 ? 0 : 1);
+wire filtered_vs = (vcnt < 4  ? 0 : 1);
+
+wire [5:0] filtered_R = (blank ? 0 : vdp_r);
+wire [5:0] filtered_G = (blank ? 0 : vdp_g);
+wire [5:0] filtered_B = (blank ? 0 : vdp_b);
+
+assign HS = raw_output ? vdp_hs : filtered_hs;
+assign VS = raw_output ? vdp_vs : filtered_vs;
+assign R  = raw_output ? vdp_r  : filtered_R;
+assign G  = raw_output ? vdp_g  : filtered_G;
+assign B  = raw_output ? vdp_b  : filtered_B;
 
 endmodule
