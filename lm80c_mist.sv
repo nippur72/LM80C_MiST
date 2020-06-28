@@ -234,7 +234,10 @@ lm80c_ps2keyboard_adapter kbd
        
 // menu configuration string passed to user_io
 localparam conf_str = {
-	"LM80C;PRG;", // must be UPPERCASE	
+	"LM80C;;", 
+	"S,SD,Mount image;",      // 1
+   "F,PRG,Load program;",    // 2
+	"F,ROM,Load firmware;",   // 3 
 	"T3,Hard reset"	
 };
 
@@ -348,9 +351,12 @@ wire        ROM_loaded;
 // ROM download helper
 downloader 
 #(
-	.ROM_START_ADDR(25'h0000), // start of ROM 
-	.PRG_START_ADDR(25'h8241), // start of BASIC program in free RAM, firmware 3.13.3
-	.PTR_PROGND    (25'h81BB)  // pointer to end of basic program
+   .BOOT_INDEX (0),
+	.PRG_INDEX  (2),
+	.ROM_INDEX  (3),	
+	.ROM_START_ADDR  (25'h0000), // start of ROM 
+	.PRG_START_ADDR  (25'h8241), // start of BASIC program in free RAM, firmware 3.13.3
+	.PTR_PROGND      (25'h81BB)  // pointer to end of basic program
 )
 downloader (
 	

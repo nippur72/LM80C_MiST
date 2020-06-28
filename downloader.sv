@@ -54,11 +54,13 @@ reg [2:0] state = 0;
 // state = 2  writing high byte pointer
 // state = 3  end
 
-wire menu_index      = dio_index[5:0];
-wire extension_index = dio_index[7:6];
+wire is_rom_download = dio_index == BOOT_INDEX || dio_index == ROM_INDEX;
+wire is_prg_download = dio_index == PRG_INDEX;
 
-wire is_rom_download = menu_index == 0;
-wire is_prg_download = menu_index == 1;
+parameter BOOT_INDEX = 0;
+parameter PRG_INDEX  = 2;
+parameter ROM_INDEX  = 3;
+
 
 parameter ROM_START_ADDR;   // start of ROM 
 parameter PRG_START_ADDR;   // start of BASIC program in free RAM
@@ -82,7 +84,7 @@ always @(posedge clk) begin
 		
 		     if(is_rom_download) addr <= ROM_START_ADDR + dio_addr;				
 		else if(is_prg_download) addr <= PRG_START_ADDR + dio_addr;		
-								
+										
 	end
 	else if(dio_dowloading_old == 1 && dio_dowloading == 0) begin
 		// main download done		
