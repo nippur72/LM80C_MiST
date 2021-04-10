@@ -142,6 +142,12 @@ wire [7:0]  cpu_dout;
 wire        cpu_rd;
 wire        cpu_wr;
 
+// PIO
+wire [7:0] PIO_data_A;
+wire [7:0] PIO_data_B;
+
+wire ROM_ENABLED = PIO_data_B[0];   // bit 0 of PIO B is used to switch between ROM and RAM
+
 lm80c lm80c
 (
 	.RESET(RESET),
@@ -174,7 +180,13 @@ lm80c lm80c
 	.ram_din  (cpu_dout),
 	.ram_dout (sdram_dout),
 	.ram_rd   (cpu_rd),
-	.ram_wr   (cpu_wr)
+	.ram_wr   (cpu_wr),
+	
+	.PIO_data_A  (PIO_data_A),
+	.PIO_data_B  (PIO_data_B),
+		
+	// debug
+	.disable_ints(st_disable_ints)
 );
 
 
@@ -238,7 +250,8 @@ localparam conf_str = {
 	"S,SD,Mount image;",      // 1
    "F,PRG,Load program;",    // 2
 	"F,ROM,Load firmware;",   // 3 
-	"T3,Hard reset"	
+	"T3,Hard reset;",
+   "O4,Disable INTs,Off,On;",	
 };
 
 localparam conf_str_len = $size(conf_str)>>3;
@@ -249,6 +262,7 @@ wire [1:0] switches;
 
 wire st_reset_switch = buttons[1];
 wire st_menu_reset   = status[3];
+wire st_disable_ints = status[4];
 
 wire scandoubler_disable;
 wire ypbpr;
@@ -356,8 +370,8 @@ downloader
 	.PRG_INDEX  (2),
 	.ROM_INDEX  (3),	
 	.ROM_START_ADDR  (25'h0000), // start of ROM 
-	.PRG_START_ADDR  (25'h8241), // start of BASIC program in free RAM, firmware 3.13.3
-	.PTR_PROGND      (25'h81BB)  // pointer to end of basic program
+	.PRG_START_ADDR  (25'h5608), // start of BASIC program in free RAM: print hex$(deek(BASTXT))
+	.PTR_PROGND      (25'h55e4)  // pointer to end of basic program
 )
 downloader (
 	
@@ -433,14 +447,20 @@ always @(*) begin
 		sdram_rd     <= 1'b1;		
 	end	
 	else begin
-		sdram_addr   <= { 9'd0, cpu_addr[15:0] };
+		sdram_addr   <= { 8'd0, RAM_OFFSET, cpu_addr[15:0] };
 		sdram_din    <= cpu_dout;		
 		sdram_wr     <= cpu_wr;
 		sdram_rd     <= cpu_rd;
 	end	
 end
 
+// SDRAM is organized the following way:
+// from 0-0000 to 0-7FFF LM80C 32K ROM
+// from 0-8000 to 0-FFFF unused 
+// from 1-0000 to 1-FFFF LM80C 64K RAM
+// from 2-0000 to max    unused
 
+wire RAM_OFFSET = ~ROM_ENABLED | (cpu_addr[15:0] > 'h7fff);
 
 sdram sdram (
 	// interface to the MT48LC16M16 chip

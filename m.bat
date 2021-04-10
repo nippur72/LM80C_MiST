@@ -1,1 +1,1 @@
-copy lm80c_mist.rbf h:%1.rbf /y & sync h:
+copy lm80c_mist.rbf k:%1.rbf /y & sync k:

@@ -30,13 +30,20 @@ module lm80c
 	output  [7:0] ram_din,
 	input   [7:0] ram_dout,
 	output        ram_rd,
-	output        ram_wr	
+	output        ram_wr,
+	
+	// PIO
+	output reg [7:0] PIO_data_A,
+	output reg [7:0] PIO_data_B,
+
+   // debug
+   input disable_ints
 );
 
 assign ram_addr = A;
 assign ram_din  = cpu_dout;
 assign ram_rd   = MREQ & RD & ~IORQ;
-assign ram_wr   = MREQ & WR & ~IORQ & RAM_SEL;
+assign ram_wr   = MREQ & WR & ~IORQ;  // was & RAM_SEL;
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -83,14 +90,44 @@ t80pa cpu
 	.iorq_n  ( IORQ_n        ),   
 	.mreq_n  ( MREQ_n        ),   
 
-	.int_n   ( INT_n         ),   
-	.nmi_n   ( VDP_INT_n     ),   
+	/*
+	.int_n   ( INT_n     ),   
+	.nmi_n   ( VDP_INT_n ),   
+
+	.int_n   ( disable_ints == 0 ? INT_n     : 1 ),   
+	.nmi_n   ( disable_ints == 0 ? VDP_INT_n : 1 ),   
+	*/
+	
+	.int_n   ( INT_n     ),   
+	.nmi_n   ( disable_ints == 0 ? VDP_INT_n : 1 ),   
 
 	.m1_n    ( M1_n          ),   
 	.rfsh_n  ( 0             ),   
 	.busrq_n ( 1             ),   
 	.wait_n  ( ~WAIT         )    
 );
+
+/******************************************************************************************/
+/******************************************************************************************/
+/***************************************** @pio *******************************************/
+/******************************************************************************************/
+/******************************************************************************************/
+
+always @(posedge sys_clock) begin
+	if(RESET) begin
+		PIO_data_A <= 0;        
+		PIO_data_B <= 1;        // ROM is enabled at boot
+	end
+	else begin
+		if(WR && IORQ && PIO_SEL) begin
+			  	  if(A[1:0] == 'b00) PIO_data_A <= cpu_dout;
+			else if(A[1:0] == 'b01) PIO_data_B <= cpu_dout;		
+		end
+	end
+end
+
+wire [7:0] pio_dout = A[1:0] == 'b00 ? PIO_data_A :
+			             A[1:0] == 'b01 ? PIO_data_B : 0;
 
 /******************************************************************************************/
 /******************************************************************************************/
@@ -108,12 +145,12 @@ reg CSR;
 reg CSW;
 reg BDIR;
 reg BC;
-reg RAM_SEL;
-reg ROM_SEL;
+
+// reg RAM_SEL;
+// reg ROM_SEL;
 
 reg [7:0] cpu_din;
 
-wire [7:0] pio_dout = 8'b0;  // PIO not implemented yet
 wire [7:0] sio_dout = 8'b1;  // SIO not implemented yet
 
 always @(posedge sys_clock) begin
@@ -130,9 +167,10 @@ always @(posedge sys_clock) begin
 	BDIR = ~(~WR | ~PSG_SEL);
 	BC   = ~(A[0] | ~PSG_SEL);
 
-	RAM_SEL <= A[15] & MREQ;
-	ROM_SEL <= MREQ & A[15]==0;
+	// RAM_SEL <= A[15] & MREQ;
+	// ROM_SEL <= MREQ & A[15]==0;
 
+	// CPU reads I/O
 	if(RD && IORQ) 
 		cpu_din <=  PIO_SEL ? pio_dout :
 						CTC_SEL ? ctc_dout :
@@ -140,9 +178,11 @@ always @(posedge sys_clock) begin
 						VDP_SEL ? vdp_dout :
 						PSG_SEL ? psg_dout : A[7:0];		
 
+	// CPU reads memory					
 	if(RD && MREQ) 
 		cpu_din <= ram_dout;
-		
+	
+	// interrupt vector coming from CTC
 	if(IORQ && M1) 
 		cpu_din <= ctc_dout;
 	
@@ -181,7 +221,7 @@ tms9918_async tms9918
 	// control signals
    .csr_n  ( CSR       ),
    .csw_n  ( CSW       ),
-	.mode   ( A[1]      ),	   
+	.mode   ( A[0]      ),	    // TODO: A[1] when LM80C_64K = false 
    .int_n  ( VDP_INT_n ),
 
 	// cpu I/O 	
