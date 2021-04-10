@@ -250,8 +250,7 @@ localparam conf_str = {
 	"S,SD,Mount image;",      // 1
    "F,PRG,Load program;",    // 2
 	"F,ROM,Load firmware;",   // 3 
-	"T3,Hard reset;",
-   "O4,Disable INTs,Off,On;",	
+	"T3,Hard reset;"   
 };
 
 localparam conf_str_len = $size(conf_str)>>3;
@@ -262,7 +261,6 @@ wire [1:0] switches;
 
 wire st_reset_switch = buttons[1];
 wire st_menu_reset   = status[3];
-wire st_disable_ints = status[4];
 
 wire scandoubler_disable;
 wire ypbpr;

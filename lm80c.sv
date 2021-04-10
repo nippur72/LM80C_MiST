@@ -34,10 +34,7 @@ module lm80c
 	
 	// PIO
 	output reg [7:0] PIO_data_A,
-	output reg [7:0] PIO_data_B,
-
-   // debug
-   input disable_ints
+	output reg [7:0] PIO_data_B
 );
 
 assign ram_addr = A;
@@ -90,16 +87,8 @@ t80pa cpu
 	.iorq_n  ( IORQ_n        ),   
 	.mreq_n  ( MREQ_n        ),   
 
-	/*
-	.int_n   ( INT_n     ),   
-	.nmi_n   ( VDP_INT_n ),   
-
-	.int_n   ( disable_ints == 0 ? INT_n     : 1 ),   
-	.nmi_n   ( disable_ints == 0 ? VDP_INT_n : 1 ),   
-	*/
-	
-	.int_n   ( INT_n     ),   
-	.nmi_n   ( disable_ints == 0 ? VDP_INT_n : 1 ),   
+	.int_n   ( INT_n         ),   
+	.nmi_n   ( VDP_INT_n     ),   
 
 	.m1_n    ( M1_n          ),   
 	.rfsh_n  ( 0             ),   
