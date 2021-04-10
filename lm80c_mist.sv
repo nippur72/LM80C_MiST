@@ -5,10 +5,10 @@
 
 // TODO aggiungere "or reset" negli always
 // TODO italian keyboard
-// TODO sio, pio dummy modules
+// TODO rendere PIO un modulo separato
+// TODO sio dummy modules
 // TODO color problem (check pixel to pixel, vsync>200?)
 // TODO understand dowloader/data_io need for CLOCK
-// TODO osd bug menu size with clk x 4
 
 
 // top level module
@@ -108,7 +108,7 @@ wire psg_ena = clk_div == 0;
 // RESET goes into: t80a, vdp, psg, ctc
 
 // reset while booting or when the physical reset key is pressed
-wire RESET = ~ROM_loaded | reset_key | eraser_busy; 
+wire RESET = ~ROM_loaded | reset_key | st_reset_switch | eraser_busy; 
 
 // stops the cpu when booting, downloading or erasing
 wire WAIT = ~ROM_loaded | is_downloading;
@@ -182,11 +182,9 @@ lm80c lm80c
 	.ram_rd   (cpu_rd),
 	.ram_wr   (cpu_wr),
 	
+	// parallel port
 	.PIO_data_A  (PIO_data_A),
-	.PIO_data_B  (PIO_data_B),
-		
-	// debug
-	.disable_ints(st_disable_ints)
+	.PIO_data_B  (PIO_data_B)	
 );
 
 
@@ -367,9 +365,9 @@ downloader
    .BOOT_INDEX (0),
 	.PRG_INDEX  (2),
 	.ROM_INDEX  (3),	
-	.ROM_START_ADDR  (25'h0000), // start of ROM 
-	.PRG_START_ADDR  (25'h5608), // start of BASIC program in free RAM: print hex$(deek(BASTXT))
-	.PTR_PROGND      (25'h55e4)  // pointer to end of basic program
+	.ROM_START_ADDR  (25'h00000), // start of ROM (bank 0 of SDRAM)
+	.PRG_START_ADDR  (25'h15608), // start of BASIC program in free RAM: print hex$(deek(BASTXT))
+	.PTR_PROGND      (25'h155e4)  // pointer to end of basic program
 )
 downloader (
 	
@@ -408,7 +406,7 @@ wire [7:0]  eraser_data;
 eraser eraser(
 	.clk      ( sys_clock     ),
 	.ena      ( z80_ena       ),
-	.trigger  ( st_menu_reset | st_reset_switch ),	
+	.trigger  ( st_menu_reset ),	
 	.erasing  ( eraser_busy   ),
 	.wr       ( eraser_wr     ),
 	.addr     ( eraser_addr   ),
