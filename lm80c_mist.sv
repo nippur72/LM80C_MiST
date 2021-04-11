@@ -113,7 +113,7 @@ wire RESET = ~ROM_loaded | reset_key | st_reset_switch | eraser_busy;
 // stops the cpu when booting, downloading or erasing
 wire WAIT = ~ROM_loaded | is_downloading;
 
-assign LED = ~WAIT;
+assign LED = ~(WAIT | PIO_data_B[1]);
 
 /******************************************************************************************/
 /******************************************************************************************/
