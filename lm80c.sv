@@ -200,7 +200,11 @@ vram vram
 wire [7:0] vdp_dout;
 wire VDP_INT_n;
 
-tms9918_async tms9918
+tms9918_async 
+#(
+	.HORIZONTAL_SHIFT(-42)    // -36 good empiric value to center the image on the screen
+) 
+tms9918
 (
 	// clock
 	.RESET(RESET),

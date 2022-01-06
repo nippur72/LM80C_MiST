@@ -51,6 +51,7 @@ always @(posedge clk) begin
 end
 
 localparam IS_PAL = 0;
+parameter HORIZONTAL_SHIFT = -36;
 
 vdp18_core
   
@@ -117,7 +118,7 @@ localparam SCREEN_NLINES = IS_PAL ? 312 : 261;
 always @(posedge clk) begin
 	if(ena) begin	
 		if(RESET) begin
-			hcnt <= -36;
+			hcnt <= HORIZONTAL_SHIFT;  // -36 is a good value for my CRT TV
 			vcnt <= 0;
 		end
 		else begin
